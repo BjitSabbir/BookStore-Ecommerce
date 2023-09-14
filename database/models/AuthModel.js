@@ -20,7 +20,7 @@ const AuthSchema = new mongoose.Schema({
         default: 2,
     },
     userId: {
-        type: mongoose.Types.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
     },
     authOtp: [{

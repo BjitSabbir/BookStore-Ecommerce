@@ -38,7 +38,8 @@ class AuthControllers {
         else {
             const isMatch = await comparePassword(password, user.password);
             if (isMatch) {
-                const token = await generateToken(user._id);
+                console.log(user.role, user.email,user.userId);
+                const token = await generateToken(user.userId,user.role, user.email);
                 return res.status(OK).send(successMessage("Login successful", { token }));
 
             }
@@ -91,17 +92,21 @@ class AuthControllers {
                     } else {
                         user.isVerified = true;
                         user.authOtp = [];
-                        await user.save();
+                     
 
                         //create User 
                         const newUserDetail = await UserModel.create({
                             email: user.email
                         })
 
+                        user.userId = newUserDetail._id
+
+                        
+
                         if (newUserDetail) {
+                            await user.save();
                             return res.status(OK).send(successMessage("Email verified successfully"));
                         } else {
-
                             return res.status(NOT_FOUND).send(errorMessage("Something went wrong"));
                         }
                     }
