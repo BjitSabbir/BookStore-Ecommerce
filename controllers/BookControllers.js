@@ -23,13 +23,14 @@ class BookControllers{
         
     }
 
-    getAllBooks(req, res){
+     getAllBooks(req, res){
         BooksModel.find().then((books) => {
             return res.status(OK).send(successMessage('Books fetched successfully', books));
         }).catch((error) => {
             return res.status(NOT_FOUND).send(errorMessage(error));
         })
     }
+
 }
 
 module.exports = new BookControllers()

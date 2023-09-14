@@ -6,7 +6,7 @@ const { NOT_FOUND,OK } = require('./constants/statusCode');
 const { successMessage } = require('./utils/app-errors');
 const AuthRoutes = require('./routes/AuthRoutes');
 const BookRoutes = require('./routes/BookRoutes');
-
+const ReviewRoutes = require('./routes/ReviewRoutes');
 
 
 
@@ -26,6 +26,7 @@ app.get("/", (req, res) => {
 
 app.use("/auth", AuthRoutes);
 app.use("/books", BookRoutes)
+app.use("/reviews",ReviewRoutes)
 // app.use("",(req, res)=>{
 //     return res.status(NOT_FOUND).render("notFound.ejs")
 // })
