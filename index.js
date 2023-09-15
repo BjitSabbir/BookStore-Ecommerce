@@ -7,6 +7,8 @@ const { successMessage } = require('./utils/app-errors');
 const AuthRoutes = require('./routes/AuthRoutes');
 const BookRoutes = require('./routes/BookRoutes');
 const ReviewRoutes = require('./routes/ReviewRoutes');
+const DiscountRoutes = require('./routes/DiscountRoutes');
+const startDiscountScheduler = require('./services/discountScheduler');
 
 
 
@@ -27,12 +29,14 @@ app.get("/", (req, res) => {
 app.use("/auth", AuthRoutes);
 app.use("/books", BookRoutes)
 app.use("/reviews",ReviewRoutes)
+app.use("/admin/discount",DiscountRoutes)
 // app.use("",(req, res)=>{
 //     return res.status(NOT_FOUND).render("notFound.ejs")
 // })
 
 
 databaseConnection(() => {
+    startDiscountScheduler();
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
     })

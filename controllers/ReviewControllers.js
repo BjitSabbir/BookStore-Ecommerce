@@ -1,45 +1,117 @@
 const ReviewModel = require('../database/models/ReviewModel');
 const UserModel = require('../database/models/UserModel');
-const BooksModel = require('../database/models/BooksModel');
+const BookModel = require('../database/models/BookModel');
 const { successMessage, errorMessage } = require('../utils/app-errors');
-const { OK, NOT_FOUND, FORBIDDEN, CREATED } = require('./../constants/statusCode');
+const { OK, NOT_FOUND, FORBIDDEN, CREATED, INTERNAL_SERVER_ERROR } = require('./../constants/statusCode');
 
-
-class ReviwControllers{
-    
-    async addRatingsToBooks(req, res){
-        if(req.user.role===1){
-            return res.status(FORBIDDEN).send(errorMessage("You are logged in as admin"));
-        }else{
-            const user = UserModel.findById(req.user.userId);
-console.log(req.user)
-
-
-            if(!user){
-                return res.status(NOT_FOUND).send(errorMessage("User not found"));
-            }else{
-                const book = await BooksModel.findById(req.body.bookId);
-                if(!book){
-                    return res.status(NOT_FOUND).send(errorMessage("Book not found"));
-                }else{
-                    const review = await ReviewModel.create({
-                        userId: req.body.userId,
-                        bookId: req.body.bookId,
-                        rating: req.body.rating,
-                        comment: req.body.comment
-                    });
-                    book.reviews.push(review._id);
-                    await book.save();
-                    return res.status(CREATED).send(successMessage("Review added successfully",await book.populate({
-                        path: 'reviews',
-                    })));
-                   
-                }
+class ReviwControllers {
+    async addRatingsToBooks(req, res) {
+        try {
+            if (req.user.role === 1) {
+                return res.status(FORBIDDEN).send(errorMessage("You are logged in as admin"));
             }
 
+            const user = await UserModel.findById(req.user.userId);
+
+            if (!user) {
+                return res.status(NOT_FOUND).send(errorMessage("User not found"));
+            }
+
+            const book = await BookModel.findById(req.body.bookId);
+
+            if (!book) {
+                return res.status(NOT_FOUND).send(errorMessage("Book not found"));
+            }
+
+            // Check if the user has an existing review for the book
+            const existingReview = await ReviewModel.findOne({
+                userId: req.user.userId,
+                bookId: req.body.bookId
+            });
+
+            if (existingReview) {
+                // If an existing review is found, update it
+                existingReview.rating = req.body.rating;
+                existingReview.comment = req.body.comment;
+                await existingReview.save();
+            } else {
+                // If no existing review is found, create a new one
+                const review = await ReviewModel.create({
+                    userId: req.user.userId,
+                    bookId: req.body.bookId,
+                    rating: req.body.rating,
+                    comment: req.body.comment
+                });
+                book.reviews.push(review._id);
+                user.reviews.push(review._id);
+            }
+
+            // Calculate the average rating for the book
+            const reviews = await ReviewModel.find({ bookId: req.body.bookId });
+            const totalRatings = reviews.reduce((sum, review) => sum + review.rating, 0);
+            const averageRating = totalRatings / reviews.length;
+            book.rating = averageRating;
+            await book.save();
+            await user.save();
+
+            return res.status(OK).send(successMessage("Review updated successfully", await book.populate({
+                path: 'reviews',
+            })));
+        } catch (error) {
+            console.error(error);
+            return res.status(INTERNAL_SERVER_ERROR).send(errorMessage("Internal server error"));
         }
     }
 
+    async deleteRatingsFromBooks(req, res) {
+        try {
+            if (req.user.role === 1) {
+                return res.status(FORBIDDEN).send(errorMessage("You are logged in as admin"));
+            }
+
+            const user = await UserModel.findById(req.user.userId);
+
+            if (!user) {
+                return res.status(NOT_FOUND).send(errorMessage("User not found"));
+            }
+
+            const book = await BookModel.findById(req.body.bookId);
+
+            if (!book) {
+                return res.status(NOT_FOUND).send(errorMessage("Book not found"));
+            }
+
+            // Check if the user has an existing review for the book
+            const existingReview = await ReviewModel.findOne({
+                userId: req.user.userId,
+                bookId: req.body.bookId
+            });
+
+            if (existingReview) {
+                // If an existing review is found, delete it
+                await ReviewModel.deleteOne({ _id: existingReview._id });
+
+                // Remove the review ID from the book and user's reviews arrays
+                book.reviews.pull(existingReview._id);
+                user.reviews.pull(existingReview._id);
+
+                // Recalculate the average rating for the book
+                const reviews = await ReviewModel.find({ bookId: req.body.bookId });
+                const totalRatings = reviews.reduce((sum, review) => sum + review.rating, 0);
+                const averageRating = reviews.length > 0 ? totalRatings / reviews.length : 0;
+                book.rating = averageRating;
+                await book.save();
+                await user.save();
+
+                return res.status(OK).send(successMessage("Review deleted successfully"));
+            } else {
+                return res.status(NOT_FOUND).send(errorMessage("Review not found"));
+            }
+        } catch (error) {
+            console.error(error);
+            return res.status(INTERNAL_SERVER_ERROR).send(errorMessage("Internal server error"));
+        }
+    }
 }
 
-module.exports = new ReviwControllers()
+module.exports = new ReviwControllers();
