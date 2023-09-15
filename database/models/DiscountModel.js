@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { prependListener } = require('./BookModel');
 
 const discountSchema = new mongoose.Schema({
     name: {
@@ -35,7 +36,28 @@ const discountSchema = new mongoose.Schema({
         type: Date,
         required: true,
     },
+    isActivated: {
+        type: Boolean,
+        default: false
+    }
 });
+
+//discount activationDate < endDate
+discountSchema.pre('save', function (next) {
+    if(this.activationDate < new Date()){ 
+       this.activationDate = new Date();
+    }
+
+
+    if (this.endDate < this.activationDate) {
+        // Set endDate to activationDate + 24 hours
+        this.endDate = new Date(this.activationDate);
+        this.endDate.setHours(this.endDate.getHours() + 24);
+    }
+
+    next();
+});
+
 
 const DiscountModel = mongoose.model('Discount', discountSchema);
 
