@@ -50,18 +50,24 @@ class transactionControllers {
             address: address,
         });
 
+
+
         //inside books there are quantity and bookId
+        
+        let isQuantityAvailable = true
 
         cart.books.forEach(async (book) => {
             const serverBook = await BookModel.findById(book.bookId);
             if (serverBook.stock_quantity < book.quantity) {
+                isQuantityAvailable = false
                 return res
                     .status(BAD_REQUEST)
                     .send(errorMessage("Quantity not available"));
-            }
-            serverBook.stock_quantity =
+            }else{
+                serverBook.stock_quantity =
                 serverBook.stock_quantity - book.quantity;
-            await serverBook.save();
+                await serverBook.save();
+            }
         });
 
         //add a new wallet transection
@@ -75,19 +81,42 @@ class transactionControllers {
         //reduce wallet balance
         userWallet.balance = userWallet.balance - cart.total;
 
+        cart.books = [];
+        cart.total = 0;
+
+        //save cart
+        await cart.save();
+
         //save wallet transection
         await walletTransection.save();
 
         //save wallet
         await userWallet.save();
 
-        //save wallet
-        await wallet.save();
 
-        return res
-            .status(OK)
-            .send(successMessage("Transection created successfully", wallet));
+        //save wallet
+        await wallet.save()
+
+        const userLatestTransection = await TransectionModel.findOne({
+            userId: req.user.userId,
+        })
+
+        await userLatestTransection.setUserTypeDiscountAmount()
+        await userLatestTransection.save();
+
+        if (isQuantityAvailable) {
+            return res
+                .status(OK)
+                .send(
+                    successMessage(
+                        "Transection added successfully",
+                        userLatestTransection
+                    )
+                );
+        }
     }
+
+
     async getUserTransaction(req, res) {
         const Transection = await TransectionModel.find({
             userId: req.user.userId,
