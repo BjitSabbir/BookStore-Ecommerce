@@ -17,13 +17,50 @@ const BookModel = require("../database/models/BookModel");
 // };
 
 class CartControllers {
+
+
     async getCart(req, res) {
         const cart = await CartModel.findOne({
             userId: req.user.userId,
         }).populate({
             path: "books.bookId",
-            select: "title authors isbn",
+            select: "title authors isbn price discount_percentage",
         });
+
+
+        //here for cart.books update price 
+        // Define an array to store promises
+        const bookUpdatePromises = [];
+        let totalPrice = 0;
+
+        // Use for...of loop to ensure async/await works as expected
+        for (const book of cart.books) {
+            const bookData = await BookModel.findById(book.bookId._id);
+
+            if (bookData.discount_percentage > 0) {
+                book.price = bookData.price * (1 - bookData.discount_percentage / 100);
+                // Save discounted price
+            } else {
+                book.price = bookData.price;
+            }
+
+            totalPrice += book.price * book.quantity;
+
+            // Push the promise returned by the async operation to the array
+        }
+
+        // Wait for all the async updates to complete
+        await Promise.all(bookUpdatePromises);
+
+        // Set cart.total to the calculated totalPrice
+        cart.total = totalPrice;
+
+        // Save the updated cart
+        await cart.save();
+
+
+
+
 
         if (!cart) {
             return res.status(NOT_FOUND).send(errorMessage("Cart not found"));
@@ -33,6 +70,9 @@ class CartControllers {
                 .send(successMessage("Cart fetched successfully", cart));
         }
     }
+
+
+
     async addToCart(req, res) {
         const { bookId, quantity } = req.body;
 
@@ -152,7 +192,7 @@ class CartControllers {
 
                     const price = book.isDiscountActive
                         ? cart.books[existingBookIndex].quantity *
-                          (1 - book.discount_percentage / 100)
+                        (1 - book.discount_percentage / 100)
                         : book.price;
 
                     cart.total = cart.books.reduce(

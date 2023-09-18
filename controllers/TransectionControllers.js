@@ -42,6 +42,37 @@ class transactionControllers {
                 .send(errorMessage("Insufficient balance"));
         }
 
+  
+
+        const bookUpdatePromises = [];
+        let totalPrice = 0;
+
+        
+        // Use for...of loop to ensure async/await works as expected
+        for (const book of cart.books) {
+            const bookData = await BookModel.findById(book.bookId._id);
+
+            if (bookData.discount_percentage > 0) {
+                book.price = bookData.price * (1 - bookData.discount_percentage / 100);
+                // Save discounted price
+            } else {
+                book.price = bookData.price;
+            }
+
+            totalPrice += book.price * book.quantity;
+
+            // Push the promise returned by the async operation to the array
+        }
+
+        // Wait for all the async updates to complete
+        await Promise.all(bookUpdatePromises);
+
+        // Set cart.total to the calculated totalPrice
+        cart.total = totalPrice;
+
+        // Save the updated cart
+        await cart.save();
+
         //create new wallet
         const wallet = new TransectionModel({
             userId: req.user.userId,
@@ -49,6 +80,7 @@ class transactionControllers {
             total: cart.total,
             address: address,
         });
+
 
 
 
@@ -98,8 +130,8 @@ class transactionControllers {
         await wallet.save()
 
         const userLatestTransection = await TransectionModel.findOne({
-            userId: req.user.userId,
-        })
+            userId: req.user.userId
+        }).sort({ createdAt: -1 });
 
         await userLatestTransection.setUserTypeDiscountAmount()
         await userLatestTransection.save();
@@ -110,7 +142,7 @@ class transactionControllers {
                 .send(
                     successMessage(
                         "Transection added successfully",
-                        userLatestTransection
+                        wallet
                     )
                 );
         }
