@@ -1,0 +1,3 @@
+MONGODB_URI=mongodb+srv://sabbirahmed:sabbirahmed123@cluster0.vun26ig.mongodb.net/bookstore
+PORT = 8000
+JWT_SECRET_KEY = "myJwtSecret"
