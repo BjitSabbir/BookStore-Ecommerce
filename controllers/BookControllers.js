@@ -6,9 +6,16 @@ const {
     CREATED,
 } = require("./../constants/statusCode");
 const BookModel = require("../database/models/BookModel");
+const { validationResult } = require("express-validator");
+
 
 class BookControllers {
     async addOneBook(req, res) {
+        const error = validationResult(req).array();
+        if (error.length > 0) {
+            return res.status(NOT_FOUND).send(errorMessage(error[0].msg));
+        }
+        
         try {
             if (req.user.role === 1) {
                 const book = await BookModel.create(req.body);

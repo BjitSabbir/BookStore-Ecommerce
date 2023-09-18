@@ -28,31 +28,23 @@ class CartControllers {
         });
 
 
-        //here for cart.books update price 
-        // Define an array to store promises
-        const bookUpdatePromises = [];
+
+
         let totalPrice = 0;
 
         // Use for...of loop to ensure async/await works as expected
         for (const book of cart.books) {
             const bookData = await BookModel.findById(book.bookId._id);
-
             if (bookData.discount_percentage > 0) {
                 book.price = bookData.price * (1 - bookData.discount_percentage / 100);
-                // Save discounted price
             } else {
                 book.price = bookData.price;
             }
-
             totalPrice += book.price * book.quantity;
-
-            // Push the promise returned by the async operation to the array
+           
         }
 
-        // Wait for all the async updates to complete
-        await Promise.all(bookUpdatePromises);
-
-        // Set cart.total to the calculated totalPrice
+       
         cart.total = totalPrice;
 
         // Save the updated cart

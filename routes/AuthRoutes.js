@@ -1,11 +1,12 @@
 const express = require('express');
 const { register, login ,verifyEmail, reqForOtp } = require('../controllers/AuthControllers');
+const {userValidator} = require('../validation/inputValidationSchema');
 const route = express();
 
-route.post('/register', register)
-route.get('/requestOtp', reqForOtp)
-route.post('/login', login)
-route.post('/verifyEmail', verifyEmail)
+route.post('/register',userValidator.register, register)
+route.get('/requestOtp',userValidator.verifyOnlyEmail, reqForOtp)
+route.post('/login',userValidator.register, login)
+route.post('/verifyEmail',userValidator.verifyEmail, verifyEmail)
 
 
 

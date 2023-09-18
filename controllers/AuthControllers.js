@@ -14,9 +14,15 @@ const {
     generateToken,
     createOtp,
 } = require("../utils");
+const { validationResult } = require("express-validator");
+
 
 class AuthControllers {
     async register(req, res) {
+        const error = validationResult(req).array();
+        if (error.length > 0) {
+            return res.status(NOT_FOUND).send(errorMessage(error[0].msg));
+        }
         const { email, password } = req.body;
         const user = await AuthModel.findOne({ email });
         if (user) {
@@ -46,6 +52,10 @@ class AuthControllers {
     }
 
     async login(req, res) {
+        const error = validationResult(req).array();
+        if (error.length > 0) {
+            return res.status(NOT_FOUND).send(errorMessage(error[0].msg));
+        }
         const { email, password } = req.body;
         const user = await AuthModel.findOne({ email });
         if (!user) {
@@ -75,6 +85,10 @@ class AuthControllers {
     }
 
     async reqForOtp(req, res) {
+        const error = validationResult(req).array();
+        if (error.length > 0) {
+            return res.status(NOT_FOUND).send(errorMessage(error[0].msg));
+        }
         const { email } = req.body;
         const user = await AuthModel.findOne({ email });
         if (!user) {
@@ -96,6 +110,10 @@ class AuthControllers {
     }
 
     async verifyEmail(req, res) {
+        const error = validationResult(req).array();
+        if (error.length > 0) {
+            return res.status(NOT_FOUND).send(errorMessage(error[0].msg));
+        }
         const { email, otp } = req.body;
         const user = await AuthModel.findOne({ email });
         if (!user) {

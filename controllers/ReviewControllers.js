@@ -152,6 +152,71 @@ class ReviwControllers {
                 .send(errorMessage("Internal server error"));
         }
     }
+
+    async getReviewByUser(req, res) {
+        try {
+            const userId = req.user.userId;
+            const bookId = req.query.bookId;
+
+
+            // Find all reviews by the user
+            let userReviews;
+            if (bookId) {
+                userReviews = await ReviewModel.find({ userId: userId, bookId: bookId })
+                    .populate('bookId', 'title authors isbn price discount_percentage');
+
+            } else {
+                userReviews = await ReviewModel.find({ userId: userId })
+            }
+
+
+            if (!userReviews) {
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("No reviews found for this user"));
+            }
+
+            return res.status(OK).send(
+                successMessage(
+                    "Reviews fetched successfully for the user",
+                    userReviews
+                )
+            );
+        } catch (error) {
+            console.error(error);
+            return res
+                .status(INTERNAL_SERVER_ERROR)
+                .send(errorMessage("Internal server error"));
+        }
+    }
+    async getReviewByBookId(req, res) {
+        try {
+            const bookId = req.query.bookId;
+
+            // Find all reviews for the specified book and populate the associated user and book details
+            const bookReviews = await ReviewModel.find({ bookId: bookId })
+                .populate('userId', 'username email') // Replace with the fields you want to populate for the user
+                .populate('bookId', 'title authors isbn price discount_percentage'); // Replace with the fields you want to populate for the book
+
+            if (!bookReviews) {
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage('No reviews found for this book'));
+            }
+
+            return res.status(OK).send(
+                successMessage(
+                    'Reviews fetched successfully for the book',
+                    bookReviews
+                )
+            );
+        } catch (error) {
+            console.error(error);
+            return res
+                .status(INTERNAL_SERVER_ERROR)
+                .send(errorMessage('Internal server error'));
+        }
+    }
 }
 
 module.exports = new ReviwControllers();
