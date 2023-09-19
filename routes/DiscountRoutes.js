@@ -16,7 +16,7 @@ routes.post(
     verifyTokenMiddleware,
     createDiscount
 );
-routes.get("/add/:id", verifyTokenMiddleware, getDiscount);
+routes.get("/get/:id", verifyTokenMiddleware, getDiscount);
 routes.put(
     "/update/:id",
     verifyTokenMiddleware,
