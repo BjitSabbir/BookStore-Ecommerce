@@ -13,6 +13,7 @@ const CartRoutes = require("./routes/CartRoutes");
 const TransactionRoutes = require("./routes/TransectionRoutes");
 const WalletRoutes = require("./routes/WalletRoutes");
 const GetRecommendationRoute = require("./routes/GetRecommendationRoute");
+const AdminRoutes = require("./routes/AdminRoutes");
 const startDiscountScheduler = require("./services/discountScheduler");
 const morgan = require('morgan');
 
@@ -42,6 +43,7 @@ app.use("/user/cart", CartRoutes);
 app.use("/user/wallet", WalletRoutes);
 app.use("/user/transactions", TransactionRoutes);
 app.use("/user/recommendations", GetRecommendationRoute);
+app.use("/admin",AdminRoutes)
 
 app.use("",(req, res)=>{
     return res.status(NOT_FOUND).render("notFound.ejs")

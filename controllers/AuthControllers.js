@@ -105,7 +105,7 @@ class AuthControllers {
             await user.save();
             return res
                 .status(OK)
-                .send(successMessage("Otp sent successfully", { otpCreation }));
+                .send(successMessage("Otp sent successfully", otpCreation.otp ));
         }
     }
 

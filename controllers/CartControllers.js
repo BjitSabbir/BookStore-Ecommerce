@@ -28,6 +28,10 @@ class CartControllers {
         });
 
 
+        if(!cart) {
+            return res.status(NOT_FOUND).send(errorMessage("Cart not found"));
+        } 
+
 
 
         let totalPrice = 0;

@@ -1,6 +1,6 @@
 const express = require('express');
 const { register, login ,verifyEmail, reqForOtp } = require('../controllers/AuthControllers');
-const {userValidator} = require('../validation/inputValidationSchema');
+const {userValidator} = require('../database/validation/inputValidationSchema');
 const route = express();
 
 route.post('/register',userValidator.register, register)
