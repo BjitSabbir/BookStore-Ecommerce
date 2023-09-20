@@ -5,11 +5,12 @@
         "authors": ["Author 1", "Author 2"],
         "description": "Description of Book 1",
         "price": 19.99,
-        "discount": 0,
+        "discount_percentage": 0,
         "genre": "Fiction",
         "isbn": "1234567890",
         "stock_quantity": 50,
-        "reviews": []
+        "reviews": [],
+        "isDiscountActive": false
     },
     {
         "book_id": 2,
@@ -17,11 +18,12 @@
         "authors": ["Author 3"],
         "description": "Description of Book 2",
         "price": 24.99,
-        "discount": 5,
+        "discount_percentage": 5,
         "genre": "Non-Fiction",
         "isbn": "0987654321",
         "stock_quantity": 30,
-        "reviews": []
+        "reviews": [],
+        "isDiscountActive": true
     },
     {
         "book_id": 3,
@@ -29,11 +31,12 @@
         "authors": ["Author 4"],
         "description": "Description of Book 3",
         "price": 14.95,
-        "discount": 10,
+        "discount_percentage": 10,
         "genre": "Mystery",
         "isbn": "5678901234",
         "stock_quantity": 25,
-        "reviews": []
+        "reviews": [],
+        "isDiscountActive": true
     },
     {
         "book_id": 4,
@@ -41,11 +44,12 @@
         "authors": ["Author 2", "Author 5"],
         "description": "Description of Book 4",
         "price": 29.99,
-        "discount": 0,
+        "discount_percentage": 0,
         "genre": "Science Fiction",
         "isbn": "4321098765",
         "stock_quantity": 40,
-        "reviews": []
+        "reviews": [],
+        "isDiscountActive": false
     },
     {
         "book_id": 5,
@@ -53,10 +57,11 @@
         "authors": ["Author 6"],
         "description": "Description of Book 5",
         "price": 9.99,
-        "discount": 15,
+        "discount_percentage": 15,
         "genre": "Comedy",
         "isbn": "9876543210",
         "stock_quantity": 20,
-        "reviews": []
+        "reviews": [],
+        "isDiscountActive": true
     }
 ]

@@ -1,0 +1,12 @@
+//Customar Type 
+#silver user 0-100 transection will get 0% discount
+#gold user 100-200 transection will get 2% discount
+#platinum user 200-300 transection will get 4% discount
+#diamond user 300-> transection will get 6% discount
+
+//discount 
+# add discount based on time 
+# if one product has multiple discount, latest discount will be applied 
+# if a  product has multiple discount and latest discount is disabled/ deleted the previous discount will be applied 
+# if a discount removed or deleted then the discount will be removed
+# if a discount is update then the discount will be removed by scheduler and will be again applied after one minute

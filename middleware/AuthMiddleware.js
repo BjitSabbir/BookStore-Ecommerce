@@ -9,7 +9,11 @@ const verifyTokenMiddleware = async (req, res, next) => {
     }else{
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-            req.user = decoded;
+            req.user = {
+                userId : decoded.id,
+                role : decoded.role,
+                email : decoded.email
+            };
             next();
         } catch (error) {
             return res.status(NOT_FOUND).send(errorMessage(error));
