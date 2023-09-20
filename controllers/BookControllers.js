@@ -12,31 +12,71 @@ const ReviewModel = require("../database/models/ReviewModel");
 const { validationResult } = require("express-validator");
 const { mongoose } = require("mongoose");
 
-
 class BookControllers {
     async getAllBooks(req, res) {
         try {
-            const { page = 1, limit = 10, search, discounted, sortType, sortKey } = req.query;
+            const error = validationResult(req).array();
+            if (error.length > 0) {
+                return res.status(NOT_FOUND).send(errorMessage(error[0].msg));
+            }
+
+            const {
+                page = 1,
+                limit = 10,
+                search,
+                discounted,
+                sortType,
+                sortKey,
+                author,
+                region,
+            } = req.query;
             const parsedPage = parseInt(page);
             const parsedLimit = parseInt(limit);
 
-            if (isNaN(parsedPage) || isNaN(parsedLimit) || parsedPage < 1 || parsedLimit < 1 || parsedLimit > 50) {
-                return res.status(400).json({ error: 'Invalid page or limit values' });
+            if (
+                isNaN(parsedPage) ||
+                isNaN(parsedLimit) ||
+                parsedPage < 1 ||
+                parsedLimit < 1 ||
+                parsedLimit > 50
+            ) {
+                return res
+                    .status(400)
+                    .json({ error: "Invalid page or limit values" });
             }
 
             const filter = {};
+
+            // Case-insensitive search on multiple fields
             if (search) {
-                filter.title = { $regex: new RegExp(search, 'i') }; // Case-insensitive search
+                filter.$or = [
+                    { title: { $regex: new RegExp(search, "i") } },
+                    { authors: { $in: [new RegExp(search, "i")] } },
+                    { description: { $regex: new RegExp(search, "i") } },
+                    { genre: { $regex: new RegExp(search, "i") } },
+                ];
             }
-            if (discounted === 'true') {
-                filter.discount_percentage = { $gt: 0 }; // Filter discounted books
+
+            // Filter discounted books
+            if (discounted === "true") {
+                filter.discount_percentage = { $gt: 0 };
+            }
+
+            // Filter by author
+            if (author) {
+                filter.authors = { $in: [new RegExp(author, "i")] };
+            }
+
+            // Filter by region
+            if (region) {
+                filter.book_Active_regions = { $in: [new RegExp(region, "i")] };
             }
 
             const skip = (parsedPage - 1) * parsedLimit;
 
             const sort = {};
             if (sortKey && sortType) {
-                sort[sortKey] = sortType === 'asc' ? 1 : -1;
+                sort[sortKey] = sortType === "asc" ? 1 : -1;
             }
 
             let books = await BookModel.find(filter)
@@ -46,7 +86,9 @@ class BookControllers {
 
             const booksWithDiscountedPrice = books.map((book) => {
                 if (book.discount_percentage > 0) {
-                    const discountedPrice = book.price - book.price * (book.discount_percentage / 100);
+                    const discountedPrice =
+                        book.price -
+                        book.price * (book.discount_percentage / 100);
                     return {
                         ...book.toObject(),
                         discountedPrice,
@@ -59,15 +101,18 @@ class BookControllers {
             const totalBooks = await BookModel.countDocuments(filter);
 
             return res.status(OK).json({
-                message: 'Books fetched successfully',
+                message: "Books fetched successfully",
                 books: booksWithDiscountedPrice,
                 page: parsedPage,
                 totalPages: Math.ceil(totalBooks / parsedLimit),
             });
         } catch (error) {
-            return res.status(INTERNAL_SERVER_ERROR).json({ error: 'Internal server error' });
+            return res
+                .status(INTERNAL_SERVER_ERROR)
+                .json({ error: "Internal server error" });
         }
     }
+
     async addOneBook(req, res) {
         const error = validationResult(req).array();
         if (error.length > 0) {
@@ -118,7 +163,6 @@ class BookControllers {
         }
     }
 
-
     async editBook(req, res) {
         if (req.user.role === 1) {
             const error = validationResult(req).array();
@@ -126,70 +170,94 @@ class BookControllers {
                 return res.status(NOT_FOUND).send(errorMessage(error[0].msg));
             }
 
+            //check if bookid is valid mongoose object id
+            if (!mongoose.isValidObjectId(req.params.id)) {
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("Invalid book id"));
+            }
+
             try {
-                const updatedBook = await BookModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
+                const updatedBook = await BookModel.findByIdAndUpdate(
+                    req.params.id,
+                    req.body,
+                    { new: true }
+                );
 
                 if (updatedBook) {
-                    return res.status(OK).send(successMessage("Book updated successfully", updatedBook));
+                    return res
+                        .status(OK)
+                        .send(
+                            successMessage(
+                                "Book updated successfully",
+                                updatedBook
+                            )
+                        );
                 } else {
-                    return res.status(NOT_FOUND).send(errorMessage("Book not found"));
+                    return res
+                        .status(NOT_FOUND)
+                        .send(errorMessage("Book not found"));
                 }
             } catch (error) {
                 console.error(error);
-                return res.status(INTERNAL_SERVER_ERROR).send(errorMessage("Internal Server Error"));
+                return res
+                    .status(INTERNAL_SERVER_ERROR)
+                    .send(errorMessage("Internal Server Error"));
             }
         } else {
-            return res.status(FORBIDDEN).send(errorMessage("User not authorized"));
+            return res
+                .status(FORBIDDEN)
+                .send(errorMessage("User not authorized"));
         }
     }
 
-
     async deleteBook(req, res) {
         if (req.user.role === 1) {
-            const bookId = req.params.id
+            const bookId = req.params.id;
             if (mongoose.isValidObjectId(bookId)) {
-
-
                 const carts = await CartModel.find({
-                    "books.bookId": bookId
-                })
+                    "books.bookId": bookId,
+                });
 
                 //remove book from cart
                 for (const cart of carts) {
-                    cart.books = cart.books.filter(book => book.bookId.toString() !== bookId)
-                    await cart.save()
+                    cart.books = cart.books.filter(
+                        (book) => book.bookId.toString() !== bookId
+                    );
+                    await cart.save();
                 }
 
                 const reviews = await ReviewModel.find({
-                    "bookId": bookId
-                })
+                    bookId: bookId,
+                });
                 for (const review of reviews) {
-                    await ReviewModel.findByIdAndDelete(review._id)
-
+                    await ReviewModel.findByIdAndDelete(review._id);
                 }
 
                 const deletedBook = await BookModel.findByIdAndDelete(bookId);
 
                 if (deletedBook) {
-                    return res.status(OK).send(successMessage("Book deleted successfully", deletedBook));
+                    return res.status(OK).send(
+                        successMessage("Book deleted successfully", {
+                            book: deletedBook.title,
+                        })
+                    );
                 } else {
-                    return res.status(NOT_FOUND).send(errorMessage("Book not found"))
+                    return res
+                        .status(NOT_FOUND)
+                        .send(errorMessage("Book not found"));
                 }
-
-
             } else {
-                return res.status(NOT_FOUND).send(errorMessage("Invalid book id"))
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("Invalid book id"));
             }
-
-
-
         } else {
-            return res.status(FORBIDDEN).send(errorMessage("User not authorized"));
+            return res
+                .status(FORBIDDEN)
+                .send(errorMessage("User not authorized"));
         }
     }
-
-
-
 }
 
 module.exports = new BookControllers();

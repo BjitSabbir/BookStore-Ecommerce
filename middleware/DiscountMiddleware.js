@@ -14,7 +14,6 @@ const checkDiscountMiddleware = function (req, res, next) {
         bookIds,
         bookGenres,
         bookAuthors,
-        discountType,
         discountValue,
         activationDate,
         endDate,
@@ -49,16 +48,6 @@ const checkDiscountMiddleware = function (req, res, next) {
     if (bookAuthors && !Array.isArray(bookAuthors)) {
         errorMessages.push(
             "Book Authors are required and must be a non-empty array."
-        );
-    }
-
-    if (
-        !discountType ||
-        typeof discountType !== "string" ||
-        discountType.trim().length === 0
-    ) {
-        errorMessages.push(
-            "Discount Type is required and must be a non-empty string."
         );
     }
 

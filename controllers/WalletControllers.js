@@ -8,6 +8,7 @@ const {
     CREATED,
     BAD_REQUEST,
 } = require("./../constants/statusCode");
+const { validationResult } = require("express-validator");
 
 class WalletController {
     async getWalletStatus(req, res) {
@@ -24,7 +25,23 @@ class WalletController {
         }
     }
     async topupWallet(req, res) {
+        const error = validationResult(req).array();
+        if (error.length > 0) {
+            return res.status(NOT_FOUND).send(errorMessage(error[0].msg));
+        }
         const { amount } = req.body;
+
+        if (
+            !amount ||
+            amount === undefined ||
+            amount === null ||
+            amount < 10 ||
+            amount > 1000
+        ) {
+            return res
+                .status(BAD_REQUEST)
+                .send(errorMessage("A valid Amount must be provided"));
+        }
 
         if (amount < 1) {
             return res
