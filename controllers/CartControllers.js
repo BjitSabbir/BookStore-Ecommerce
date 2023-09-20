@@ -9,16 +9,10 @@ const {
 
 const CartModel = require("../database/models/CartModel");
 const BookModel = require("../database/models/BookModel");
-
-//   req.user = {
-//     userId : decoded.id,
-//     role : decoded.role,
-//     email : decoded.email
-// };
+const { default: mongoose } = require("mongoose");
+const { validationResult } = require("express-validator");
 
 class CartControllers {
-
-
     async getCart(req, res) {
         const cart = await CartModel.findOne({
             userId: req.user.userId,
@@ -27,40 +21,28 @@ class CartControllers {
             select: "title authors isbn price discount_percentage",
         });
 
+        if (!cart) {
+            return res.status(NOT_FOUND).send(errorMessage("Cart not found"));
+        }
 
-        //here for cart.books update price 
-        // Define an array to store promises
-        const bookUpdatePromises = [];
         let totalPrice = 0;
 
         // Use for...of loop to ensure async/await works as expected
         for (const book of cart.books) {
             const bookData = await BookModel.findById(book.bookId._id);
-
             if (bookData.discount_percentage > 0) {
-                book.price = bookData.price * (1 - bookData.discount_percentage / 100);
-                // Save discounted price
+                book.price =
+                    bookData.price * (1 - bookData.discount_percentage / 100);
             } else {
                 book.price = bookData.price;
             }
-
             totalPrice += book.price * book.quantity;
-
-            // Push the promise returned by the async operation to the array
         }
 
-        // Wait for all the async updates to complete
-        await Promise.all(bookUpdatePromises);
-
-        // Set cart.total to the calculated totalPrice
         cart.total = totalPrice;
 
         // Save the updated cart
         await cart.save();
-
-
-
-
 
         if (!cart) {
             return res.status(NOT_FOUND).send(errorMessage("Cart not found"));
@@ -71,12 +53,19 @@ class CartControllers {
         }
     }
 
-
-
     async addToCart(req, res) {
+        const error = validationResult(req).array();
+        if (error.length > 0) {
+            return res.status(NOT_FOUND).send(errorMessage(error[0].msg));
+        }
         const { bookId, quantity } = req.body;
 
         try {
+            if (req.user.role === 1) {
+                return res
+                    .status(FORBIDDEN)
+                    .send(errorMessage("Admin cannot add to cart"));
+            }
             const book = await BookModel.findById(bookId);
 
             if (!book) {
@@ -155,7 +144,26 @@ class CartControllers {
     }
 
     async updateCartItem(req, res) {
+        const error = validationResult(req).array();
+        if (error.length > 0) {
+            return res.status(NOT_FOUND).send(errorMessage(error[0].msg));
+        }
         const { bookId, quantity } = req.body;
+
+        if (!bookId || !quantity)
+            return res
+                .status(BAD_REQUEST)
+                .send(errorMessage("Book id and quantity are required"));
+
+        if (!mongoose.isValidObjectId(bookId)) {
+            return res.status(NOT_FOUND).send(errorMessage("Invalid book id"));
+        }
+
+        if (quantity < 1 || quantity > 100) {
+            return res
+                .status(BAD_REQUEST)
+                .send(errorMessage("Quantity must be greater than 0"));
+        }
 
         if (quantity < 1) {
             return res
@@ -164,6 +172,11 @@ class CartControllers {
         }
 
         try {
+            if (req.user.role === 1) {
+                return res
+                    .status(FORBIDDEN)
+                    .send(errorMessage("Admin cannot update to cart"));
+            }
             const book = await BookModel.findById(bookId);
             const cart = await CartModel.findOne({
                 userId: req.user.userId,
@@ -192,7 +205,7 @@ class CartControllers {
 
                     const price = book.isDiscountActive
                         ? cart.books[existingBookIndex].quantity *
-                        (1 - book.discount_percentage / 100)
+                          (1 - book.discount_percentage / 100)
                         : book.price;
 
                     cart.total = cart.books.reduce(
@@ -253,6 +266,11 @@ class CartControllers {
 
     async removeCart(req, res) {
         try {
+            if (req.user.role === 1) {
+                return res
+                    .status(FORBIDDEN)
+                    .send(errorMessage("Admin cannot remove to cart"));
+            }
             const cart = await CartModel.findOne({ userId: req.user.userId });
 
             if (!cart) {

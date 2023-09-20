@@ -4,7 +4,7 @@ const DiscountModel = require("./../database/models/DiscountModel.js");
 const BookModel = require("../database/models/BookModel.js");
 
 const activateDiscounts = async (discounts, bookModel) => {
-    console.log("activating discounts");
+    // console.log("activating discounts");
     for (const discount of discounts) {
         for (const bookId of discount.allBookIds) {
             const book = await bookModel.findOne({
@@ -26,7 +26,7 @@ const activateDiscounts = async (discounts, bookModel) => {
 };
 
 const deactivateDiscounts = async (discounts, bookModel) => {
-    console.log("deactivating discounts");
+    // console.log("deactivating discounts");
     for (const discount of discounts) {
         for (const bookId of discount.allBookIds) {
             const book = await bookModel.findOne({

@@ -31,11 +31,6 @@ const discountSchema = new mongoose.Schema({
             trim: true,
         },
     ],
-    discountType: {
-        type: String,
-        enum: ["percentage", "price"],
-        default: "percentage",
-    },
     discountValue: {
         type: Number,
         required: true,
@@ -60,65 +55,35 @@ const discountSchema = new mongoose.Schema({
 });
 
 discountSchema.pre("save", async function (next) {
-    const uniqueBookIds = [];
+    console.log("I was called");
+    const uniqueBookIds = await Promise.all([
+        ...this.bookGenres.map((genre) =>
+            BookModel.find({ genre }, "_id").distinct("_id")
+        ),
+        ...this.bookAuthors.map((author) =>
+            BookModel.find({ authors: author }, "_id").distinct("_id")
+        ),
+    ]);
 
-    for (const genre of this.bookGenres) {
-        const booksWithGenre = await BookModel.find({ genre: genre }, "_id");
-        uniqueBookIds.push(...booksWithGenre.map((book) => book._id));
-    }
+    const AllBookIds = [
+        ...new Set(uniqueBookIds.flat().map((id) => id.toString())),
+    ];
 
-    for (const author of this.bookAuthors) {
-        const booksWithAuthor = await BookModel.find(
-            { authors: author },
-            "_id"
+    if (this.allBookIds.length > 0) {
+        const extraBooks = this.allBookIds.filter(
+            (bookId) => !AllBookIds.includes(bookId)
         );
-        uniqueBookIds.push(...booksWithAuthor.map((book) => book._id));
-    }
-
-    const newBookArray = Array.from(new Set(uniqueBookIds));
-    const AllBookIds = Array.from(new Set([...this.bookIds, ...newBookArray]));
-
-    if (this.allBookIds.length === 0) {
-        this.allBookIds = AllBookIds;
-    } else {
-        // Find the extra books in this.allBookIds that are not present in AllBookIds, books ids are
-        // mongoode object ids
-
-        const extraBooks = [];
-        for (const bookId of this.allBookIds) {
-            const bookIdStr = bookId.toString();
-            if (!AllBookIds.map(String).includes(bookIdStr)) {
-                console.log(
-                    "bookId",
-                    bookIdStr,
-                    AllBookIds.includes(bookIdStr)
-                );
-                extraBooks.push(bookIdStr);
-            }
-        }
-        console.log("AllBookIds", AllBookIds);
-        console.log("this.allBookIds", this.allBookIds);
-        console.log("extraBooks", extraBooks);
 
         for (const bookId of extraBooks) {
             const book = await BookModel.findById(bookId);
             if (book) {
-                // Call removeDiscount schema method to remove discount
                 await book.removeDiscount({ discountId: this._id });
             }
         }
-
-        // Clear this.allBookIds
-        this.allBookIds = [];
-
-        // Add all the books from AllBookIds to this.allBookIds
-        AllBookIds.forEach((bookId) => {
-            if (!this.allBookIds.map(String).includes(bookId.toString())) {
-                this.allBookIds.push(bookId);
-            }
-        });
     }
-    // Check if the document exists in the database before saving
+
+    this.allBookIds = AllBookIds;
+
     if (this.isNew || this.isModified("allBookIds")) {
         this.isActivated = false;
     }

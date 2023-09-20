@@ -9,6 +9,7 @@ const {
 const DiscountModel = require("../database/models/DiscountModel");
 const BookModel = require("../database/models/BookModel");
 const { successMessage, errorMessage } = require("../utils/app-errors");
+const { validationResult } = require("express-validator");
 
 class DiscountControllers {
     async createDiscount(req, res) {
@@ -18,6 +19,12 @@ class DiscountControllers {
                 .send(errorMessage("User not authorized"));
         } else {
             try {
+                const error = validationResult(req).array();
+                if (error.length > 0) {
+                    return res
+                        .status(NOT_FOUND)
+                        .send(errorMessage(error[0].msg));
+                }
                 // Extract the discount details from the request body
                 const {
                     name,
@@ -25,34 +32,29 @@ class DiscountControllers {
                     bookIds = [],
                     bookGenres = [],
                     bookAuthors = [],
-                    discountType,
                     discountValue,
                     activationDate,
                     endDate,
                 } = req.body;
 
-                if (
-                    !name ||
-                    !description ||
-                    !activationDate ||
-                    !endDate ||
-                    !discountValue
-                ) {
-                    return res
-                        .status(BAD_REQUEST)
-                        .send(errorMessage("Invalid input data"));
+                if (bookIds.length > 0) {
+                    const bookIdsInDatabase = await BookModel.find({
+                        _id: { $in: bookIds },
+                    });
+
+                    if (bookIdsInDatabase.length !== bookIds.length) {
+                        return res
+                            .status(BAD_REQUEST)
+                            .send(errorMessage("Invalid bookIds"));
+                    }
                 }
 
-                //check bookIds
-                if (bookIds.length > 0) {
-                    bookIds.forEach((bookId) => {
-                        //check book ids are in BookModel
-                        const book = BookModel.findById(bookId);
-                        if (!book) {
-                            throw new Error("Book not found");
-                        }
-                    });
+                if (discountValue < 0 || discountValue > 80) {
+                    return res
+                        .status(BAD_REQUEST)
+                        .send(errorMessage("Invalid discount value"));
                 }
+
                 // Create a new discount document
                 const newDiscount = new DiscountModel({
                     name,
@@ -60,21 +62,20 @@ class DiscountControllers {
                     bookIds,
                     bookGenres,
                     bookAuthors,
-                    discountType,
                     discountValue,
                     activationDate,
                     endDate,
                 });
 
                 // Save the discount document to the database
-                await newDiscount.save();
+                const updatedDiscount = await newDiscount.save();
 
                 return res
                     .status(OK)
                     .send(
                         successMessage(
                             "Discount added successfully",
-                            newDiscount
+                            updatedDiscount
                         )
                     );
             } catch (error) {
@@ -95,7 +96,13 @@ class DiscountControllers {
         } else {
             try {
                 const discountId = req.params.id;
-                console.log(discountId);
+
+                //check if discountId is a mongoose.Types.ObjectId
+                if (!mongoose.Types.ObjectId.isValid(discountId)) {
+                    return res
+                        .status(BAD_REQUEST)
+                        .send(errorMessage("Invalid discountId"));
+                }
 
                 const discount = await DiscountModel.findById(discountId);
 
@@ -117,55 +124,99 @@ class DiscountControllers {
         }
     }
 
-    // Update a discount by ID
     async updateDiscount(req, res) {
         if (req.user.role === 2) {
             return res
                 .status(FORBIDDEN)
                 .send(errorMessage("User not authorized"));
-        } else {
-            try {
-                const discountId = req.params.id;
+        }
 
-                const updateData = req.body; // Use the entire req.body as update data
+        try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage(errors.array()[0].msg));
+            }
 
-                const serverDiscount = await DiscountModel.findById(discountId);
+            const discountId = req.params.id;
 
-                if (!serverDiscount) {
-                    return res
-                        .status(NOT_FOUND)
-                        .send(errorMessage("Discount not found"));
-                }
+            if (!mongoose.Types.ObjectId.isValid(discountId)) {
+                return res
+                    .status(BAD_REQUEST)
+                    .send(errorMessage("Invalid discountId"));
+            }
 
-                // Update the discount document with the provided fields
-                Object.assign(serverDiscount, updateData);
+            const {
+                name,
+                description,
+                bookIds = [],
+                bookGenres = [],
+                bookAuthors = [],
+                discountValue,
+                activationDate,
+                endDate,
+            } = req.body;
 
-                // Save the updated discount document
-                const updatedDiscount = await serverDiscount.save();
+            const bookIdsInDatabase = await BookModel.find({
+                _id: { $in: bookIds },
+            });
 
-                updatedDiscount.allBookIds.forEach(async (bookId) => {
+            if (
+                bookIds.length > 0 &&
+                bookIdsInDatabase.length !== bookIds.length
+            ) {
+                return res
+                    .status(BAD_REQUEST)
+                    .send(errorMessage("Invalid bookIds"));
+            }
+
+            const updateData = {
+                name,
+                description,
+                bookIds,
+                bookGenres,
+                bookAuthors,
+                discountValue,
+                activationDate,
+                endDate,
+            };
+
+            const serverDiscount = await DiscountModel.findById(discountId);
+
+            if (!serverDiscount) {
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("Discount not found"));
+            }
+
+            Object.assign(serverDiscount, updateData);
+
+            const updatedDiscount = await serverDiscount.save();
+
+            // Remove discount from books
+            await Promise.all(
+                updatedDiscount.allBookIds.map(async (bookId) => {
                     const book = await BookModel.findById(bookId);
                     if (book) {
-                        await book.removeDiscount({
-                            discountId: discountId
-                        });
-                        
+                        await book.removeDiscount({ discountId: discountId });
                     }
                 })
-                return res
-                    .status(OK)
-                    .send(
-                        successMessage(
-                            "Discount updated successfully",
-                            updatedDiscount
-                        )
-                    );
-            } catch (error) {
-                console.error(error);
-                return res
-                    .status(INTERNAL_SERVER_ERROR)
-                    .send(errorMessage("Internal server error"));
-            }
+            );
+
+            return res
+                .status(OK)
+                .send(
+                    successMessage(
+                        "Discount updated successfully",
+                        updatedDiscount
+                    )
+                );
+        } catch (error) {
+            console.error(error);
+            return res
+                .status(INTERNAL_SERVER_ERROR)
+                .send(errorMessage("Internal server error"));
         }
     }
 
@@ -178,6 +229,13 @@ class DiscountControllers {
         } else {
             try {
                 const discountId = req.params.id;
+
+                //check if discountId is a mongoose.Types.ObjectId
+                if (!mongoose.Types.ObjectId.isValid(discountId)) {
+                    return res
+                        .status(BAD_REQUEST)
+                        .send(errorMessage("Invalid discountId"));
+                }
                 const discount = await DiscountModel.findById(discountId);
                 if (discount) {
                     discount.allBookIds.forEach(async (bookId) => {
@@ -215,6 +273,13 @@ class DiscountControllers {
         } else {
             try {
                 const discountId = req.params.id;
+
+                //check if discountId is a mongoose.Types.ObjectId
+                if (!mongoose.Types.ObjectId.isValid(discountId)) {
+                    return res
+                        .status(BAD_REQUEST)
+                        .send(errorMessage("Invalid discountId"));
+                }
                 const discount = await DiscountModel.findById(discountId);
                 if (discount) {
                     await discount.disableDiscountSchema({
@@ -228,15 +293,12 @@ class DiscountControllers {
                             });
                         }
                     });
-                    
-                    return res
-                        .status(OK)
-                        .send(
-                            successMessage(
-                                "Discount disabled successfully",
-                                discount
-                            )
-                        );
+
+                    return res.status(OK).send(
+                        successMessage("Discount disabled successfully", {
+                            isDisabled: discount.isDisabled,
+                        })
+                    );
                 } else {
                     return res
                         .status(NOT_FOUND)

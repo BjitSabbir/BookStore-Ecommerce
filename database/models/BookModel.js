@@ -97,16 +97,16 @@ bookSchema.methods.activateDiscount = async function ({
     discountId,
     discount_region,
 }) {
-    console.log(
-        "activating discount for" +
-            this.title +
-            ": " +
-            discountValue +
-            " " +
-            discountId
-    );
+    // console.log(
+    //     "activating discount for" +
+    //         this.title +
+    //         ": " +
+    //         discountValue +
+    //         " " +
+    //         discountId
+    // );
 
-    console.log("discount region: " + discount_region);
+    // console.log("discount region: " + discount_region);
 
     this.isDiscountActive = true;
     this.discount_percentage = discountValue;
@@ -116,7 +116,7 @@ bookSchema.methods.activateDiscount = async function ({
 };
 
 bookSchema.methods.deactivateDiscount = async function ({ discountId }) {
-    console.log("deactivating discount for" + this.title + ": " + discountId);
+    // console.log("deactivating discount for" + this.title + ": " + discountId);
 
     if (
         this.isDiscountActive &&

@@ -6,9 +6,119 @@ const {
     CREATED,
 } = require("./../constants/statusCode");
 const BookModel = require("../database/models/BookModel");
+const CartModel = require("../database/models/CartModel");
+const ReviewModel = require("../database/models/ReviewModel");
+
+const { validationResult } = require("express-validator");
+const { mongoose } = require("mongoose");
 
 class BookControllers {
+    async getAllBooks(req, res) {
+        try {
+            const error = validationResult(req).array();
+            if (error.length > 0) {
+                return res.status(NOT_FOUND).send(errorMessage(error[0].msg));
+            }
+
+            const {
+                page = 1,
+                limit = 10,
+                search,
+                discounted,
+                sortType,
+                sortKey,
+                author,
+                region,
+            } = req.query;
+            const parsedPage = parseInt(page);
+            const parsedLimit = parseInt(limit);
+
+            if (
+                isNaN(parsedPage) ||
+                isNaN(parsedLimit) ||
+                parsedPage < 1 ||
+                parsedLimit < 1 ||
+                parsedLimit > 50
+            ) {
+                return res
+                    .status(400)
+                    .json({ error: "Invalid page or limit values" });
+            }
+
+            const filter = {};
+
+            // Case-insensitive search on multiple fields
+            if (search) {
+                filter.$or = [
+                    { title: { $regex: new RegExp(search, "i") } },
+                    { authors: { $in: [new RegExp(search, "i")] } },
+                    { description: { $regex: new RegExp(search, "i") } },
+                    { genre: { $regex: new RegExp(search, "i") } },
+                ];
+            }
+
+            // Filter discounted books
+            if (discounted === "true") {
+                filter.discount_percentage = { $gt: 0 };
+            }
+
+            // Filter by author
+            if (author) {
+                filter.authors = { $in: [new RegExp(author, "i")] };
+            }
+
+            // Filter by region
+            if (region) {
+                filter.book_Active_regions = { $in: [new RegExp(region, "i")] };
+            }
+
+            const skip = (parsedPage - 1) * parsedLimit;
+
+            const sort = {};
+            if (sortKey && sortType) {
+                sort[sortKey] = sortType === "asc" ? 1 : -1;
+            }
+
+            let books = await BookModel.find(filter)
+                .skip(skip)
+                .limit(parsedLimit)
+                .sort(sort);
+
+            const booksWithDiscountedPrice = books.map((book) => {
+                if (book.discount_percentage > 0) {
+                    const discountedPrice =
+                        book.price -
+                        book.price * (book.discount_percentage / 100);
+                    return {
+                        ...book.toObject(),
+                        discountedPrice,
+                    };
+                } else {
+                    return book.toObject();
+                }
+            });
+
+            const totalBooks = await BookModel.countDocuments(filter);
+
+            return res.status(OK).json({
+                message: "Books fetched successfully",
+                books: booksWithDiscountedPrice,
+                page: parsedPage,
+                totalPages: Math.ceil(totalBooks / parsedLimit),
+            });
+        } catch (error) {
+            return res
+                .status(INTERNAL_SERVER_ERROR)
+                .json({ error: "Internal server error" });
+        }
+    }
+
     async addOneBook(req, res) {
+        const error = validationResult(req).array();
+        if (error.length > 0) {
+            return res.status(NOT_FOUND).send(errorMessage(error[0].msg));
+        }
+
         try {
             if (req.user.role === 1) {
                 const book = await BookModel.create(req.body);
@@ -53,66 +163,101 @@ class BookControllers {
         }
     }
 
-    async  getAllBooks(req, res) {
-        try {
-            // Parse query parameters
-            const { page = 1, limit = 10, search, discounted } = req.query;
-    
-            // Convert page and limit to integers
-            const parsedPage = parseInt(page);
-            const parsedLimit = parseInt(limit);
-    
-            // Validate page and limit values
-            if (isNaN(parsedPage) || isNaN(parsedLimit) || parsedPage < 1 || parsedLimit < 1 || parsedLimit > 50) {
-                return res.status(400).json({ error: 'Invalid page or limit values' });
+    async editBook(req, res) {
+        if (req.user.role === 1) {
+            const error = validationResult(req).array();
+            if (error.length > 0) {
+                return res.status(NOT_FOUND).send(errorMessage(error[0].msg));
             }
-    
-            // Build filter conditions based on query parameters
-            const filter = {};
-            if (search) {
-                filter.title = { $regex: new RegExp(search, 'i') }; // Case-insensitive search
+
+            //check if bookid is valid mongoose object id
+            if (!mongoose.isValidObjectId(req.params.id)) {
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("Invalid book id"));
             }
-            if (discounted === 'true') {
-                filter.discount_percentage = { $gt: 0 }; // Filter discounted books
-            }
-    
-            // Calculate skip for pagination
-            const skip = (parsedPage - 1) * parsedLimit;
-    
-            // Find books based on filters and pagination
-            const books = await BookModel.find(filter)
-                .skip(skip)
-                .limit(parsedLimit);
-    
-            const booksWithDiscountedPrice = books.map((book) => {
-                if (book.discount_percentage > 0) {
-                    const discountedPrice =
-                        book.price - book.price * (book.discount_percentage / 100);
-                    return {
-                        ...book.toObject(),
-                        discountedPrice,
-                    };
+
+            try {
+                const updatedBook = await BookModel.findByIdAndUpdate(
+                    req.params.id,
+                    req.body,
+                    { new: true }
+                );
+
+                if (updatedBook) {
+                    return res
+                        .status(OK)
+                        .send(
+                            successMessage(
+                                "Book updated successfully",
+                                updatedBook
+                            )
+                        );
                 } else {
-                    return book.toObject();
+                    return res
+                        .status(NOT_FOUND)
+                        .send(errorMessage("Book not found"));
                 }
-            });
-    
-            // Count total matching books for pagination
-            const totalBooks = await BookModel.countDocuments(filter);
-    
-            return res.status(200).json({
-                message: 'Books fetched successfully',
-                books: booksWithDiscountedPrice,
-                page: parsedPage,
-                totalPages: Math.ceil(totalBooks / parsedLimit),
-            });
-        } catch (error) {
-            return res.status(500).json({ error: 'Internal server error' });
+            } catch (error) {
+                console.error(error);
+                return res
+                    .status(INTERNAL_SERVER_ERROR)
+                    .send(errorMessage("Internal Server Error"));
+            }
+        } else {
+            return res
+                .status(FORBIDDEN)
+                .send(errorMessage("User not authorized"));
         }
     }
-    
 
-    
+    async deleteBook(req, res) {
+        if (req.user.role === 1) {
+            const bookId = req.params.id;
+            if (mongoose.isValidObjectId(bookId)) {
+                const carts = await CartModel.find({
+                    "books.bookId": bookId,
+                });
+
+                //remove book from cart
+                for (const cart of carts) {
+                    cart.books = cart.books.filter(
+                        (book) => book.bookId.toString() !== bookId
+                    );
+                    await cart.save();
+                }
+
+                const reviews = await ReviewModel.find({
+                    bookId: bookId,
+                });
+                for (const review of reviews) {
+                    await ReviewModel.findByIdAndDelete(review._id);
+                }
+
+                const deletedBook = await BookModel.findByIdAndDelete(bookId);
+
+                if (deletedBook) {
+                    return res.status(OK).send(
+                        successMessage("Book deleted successfully", {
+                            book: deletedBook.title,
+                        })
+                    );
+                } else {
+                    return res
+                        .status(NOT_FOUND)
+                        .send(errorMessage("Book not found"));
+                }
+            } else {
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("Invalid book id"));
+            }
+        } else {
+            return res
+                .status(FORBIDDEN)
+                .send(errorMessage("User not authorized"));
+        }
+    }
 }
 
 module.exports = new BookControllers();

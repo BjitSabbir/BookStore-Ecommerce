@@ -9,18 +9,22 @@ const {
 const routes = express.Router();
 const verifyTokenMiddleware = require("../middleware/AuthMiddleware");
 const checkDiscountMiddleware = require("../middleware/DiscountMiddleware");
+const {
+    DiacountValidators,
+} = require("../database/validation/inputValidationSchema");
 
 routes.post(
     "/add",
+    DiacountValidators.createDiscountValidaor,
     checkDiscountMiddleware,
     verifyTokenMiddleware,
     createDiscount
 );
-routes.get("/add/:id", verifyTokenMiddleware, getDiscount);
+routes.get("/get/:id", verifyTokenMiddleware, getDiscount);
 routes.put(
     "/update/:id",
+    DiacountValidators.createDiscountValidaor,
     verifyTokenMiddleware,
-    checkDiscountMiddleware,
     updateDiscount
 );
 routes.delete("/remove/:id", verifyTokenMiddleware, deleteDiscount);

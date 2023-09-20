@@ -11,6 +11,7 @@ const TransectionModel = require("../database/models/TransectionModel");
 const WalletModel = require("../database/models/wallet/WalletModel");
 const WalletTransectionModel = require("../database/models/wallet/WalletTransectionModel");
 const { successMessage, errorMessage } = require("../utils/app-errors");
+const { validationResult } = require("express-validator");
 
 class transactionControllers {
     async addUserTransection(req, res) {
@@ -42,18 +43,16 @@ class transactionControllers {
                 .send(errorMessage("Insufficient balance"));
         }
 
-  
-
         const bookUpdatePromises = [];
         let totalPrice = 0;
 
-        
         // Use for...of loop to ensure async/await works as expected
         for (const book of cart.books) {
             const bookData = await BookModel.findById(book.bookId._id);
 
             if (bookData.discount_percentage > 0) {
-                book.price = bookData.price * (1 - bookData.discount_percentage / 100);
+                book.price =
+                    bookData.price * (1 - bookData.discount_percentage / 100);
                 // Save discounted price
             } else {
                 book.price = bookData.price;
@@ -81,23 +80,20 @@ class transactionControllers {
             address: address,
         });
 
-
-
-
         //inside books there are quantity and bookId
-        
-        let isQuantityAvailable = true
+
+        let isQuantityAvailable = true;
 
         cart.books.forEach(async (book) => {
             const serverBook = await BookModel.findById(book.bookId);
             if (serverBook.stock_quantity < book.quantity) {
-                isQuantityAvailable = false
+                isQuantityAvailable = false;
                 return res
                     .status(BAD_REQUEST)
                     .send(errorMessage("Quantity not available"));
-            }else{
+            } else {
                 serverBook.stock_quantity =
-                serverBook.stock_quantity - book.quantity;
+                    serverBook.stock_quantity - book.quantity;
                 await serverBook.save();
             }
         });
@@ -125,51 +121,81 @@ class transactionControllers {
         //save wallet
         await userWallet.save();
 
-
         //save wallet
-        await wallet.save()
+        await wallet.save();
 
         const userLatestTransection = await TransectionModel.findOne({
-            userId: req.user.userId
+            userId: req.user.userId,
         }).sort({ createdAt: -1 });
 
-        await userLatestTransection.setUserTypeDiscountAmount()
+        await userLatestTransection.setUserTypeDiscountAmount();
         await userLatestTransection.save();
 
         if (isQuantityAvailable) {
             return res
                 .status(OK)
-                .send(
-                    successMessage(
-                        "Transection added successfully",
-                        wallet
-                    )
-                );
+                .send(successMessage("Transection added successfully", wallet));
         }
     }
 
-
     async getUserTransaction(req, res) {
-        const Transection = await TransectionModel.find({
-            userId: req.user.userId,
-        }).populate({
-            path: "books.bookId",
-            select: "title authors isbn",
-        });
+        try {
+            const error = validationResult(req).array();
+            if (error.length > 0) {
+                return res.status(NOT_FOUND).send(errorMessage(error[0].msg));
+            }
 
-        if (!Transection) {
+            const { latest, sortType, sortKey, limit } = req.query;
+
+            // Build the query to find user transactions
+            const query = {
+                userId: req.user.userId,
+            };
+
+            const options = {
+                populate: {
+                    path: "books.bookId",
+                    select: "title authors isbn",
+                },
+            };
+
+            // Configure sorting based on the provided parameters
+            if (sortType && sortKey) {
+                const sortOptions = {};
+                sortOptions[sortKey] = sortType === "asc" ? 1 : -1;
+                options.sort = sortOptions;
+            }
+
+            if (latest) {
+                options.sort = { createdAt: -1 };
+            }
+
+            // Use findOne for the "latest" case and find for others
+            const transactions = latest
+                ? await TransectionModel.findOne(query, null, options)
+                : await TransectionModel.find(query, null, options).limit(
+                      limit
+                  );
+
+            if (!transactions) {
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("Transactions not found"));
+            } else {
+                return res
+                    .status(OK)
+                    .send(
+                        successMessage(
+                            "Transactions fetched successfully",
+                            transactions
+                        )
+                    );
+            }
+        } catch (error) {
+            console.error(error);
             return res
-                .status(NOT_FOUND)
-                .send(errorMessage("Transection not found"));
-        } else {
-            return res
-                .status(OK)
-                .send(
-                    successMessage(
-                        "Transection fetched successfully",
-                        Transection
-                    )
-                );
+                .status(INTERNAL_SERVER_ERROR)
+                .send(errorMessage("Internal server error"));
         }
     }
 }
