@@ -258,6 +258,29 @@ class BookControllers {
                 .send(errorMessage("User not authorized"));
         }
     }
+
+    async getOneBook(req, res) {
+        const bookId = req.params.id;
+        if (mongoose.isValidObjectId(bookId)) {
+            try {
+                const book = await BookModel.findById(bookId).populate({
+                    path: 'reviews',
+                    populate: { path: 'userId', select: 'email' } // Populate the userId field
+                });
+                if (book) {
+                    return res.status(OK).send(successMessage("Book fetched successfully", book));
+                } else {
+                    return res.status(NOT_FOUND).send(errorMessage("Book not found"));
+                }
+            } catch (error) {
+                console.error("Error fetching book:", error);
+                return res.status(INTERNAL_SERVER_ERROR).send(errorMessage("Internal Server Error"));
+            }
+        } else {
+            return res.status(NOT_FOUND).send(errorMessage("Invalid book id"));
+        }
+    }
+
 }
 
 module.exports = new BookControllers();

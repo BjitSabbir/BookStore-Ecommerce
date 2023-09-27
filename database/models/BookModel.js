@@ -33,6 +33,10 @@ const bookSchema = new mongoose.Schema(
                 trim: true,
             },
         ],
+        image:{
+            type: String,
+            required : false
+        },
         description: {
             type: String,
             required: true,
