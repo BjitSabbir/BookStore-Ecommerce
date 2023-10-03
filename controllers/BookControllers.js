@@ -121,6 +121,18 @@ class BookControllers {
 
         try {
             if (req.user.role === 1) {
+                const latestBook = await BookModel.findOne({}, {}, { sort: { book_id: -1 } });
+                let newBookId = 1;
+
+                if (latestBook) {
+                    newBookId = latestBook.book_id + 1;
+                }
+
+                req.body.book_id = newBookId;
+                console.log(req.body);
+
+                //stopping 
+
                 const book = await BookModel.create(req.body);
                 return res
                     .status(CREATED)

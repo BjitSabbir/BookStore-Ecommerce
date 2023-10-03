@@ -73,9 +73,11 @@ class AuthControllers {
                     user.role,
                     user.email
                 );
+                const role = user.role;
+                const userId = user.userId;
                 return res
                     .status(OK)
-                    .send(successMessage("Login successful", { token }));
+                    .send(successMessage("Login successful", { token, role, userId }));
             } else {
                 return res
                     .status(NOT_FOUND)
@@ -105,7 +107,7 @@ class AuthControllers {
             await user.save();
             return res
                 .status(OK)
-                .send(successMessage("Otp sent successfully", otpCreation.otp ));
+                .send(successMessage("Otp sent successfully", otpCreation.otp));
         }
     }
 

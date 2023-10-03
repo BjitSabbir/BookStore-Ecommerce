@@ -93,21 +93,6 @@ const bookValidator = {
     ],
 
     addOneBook: [
-        body("book_id")
-            .exists()
-            .withMessage("Book id is required")
-            .bail()
-            .withMessage("Book id must be a number")
-            .bail()
-            .isNumeric()
-            .withMessage("Book id must be a number")
-            .bail()
-            .isInt({
-                min: 1,
-                max: 5000,
-            })
-            .withMessage("Book id must be a valid number between 1 to 5000"),
-
         body("title")
             .exists()
             .withMessage("Title is required")
@@ -142,7 +127,7 @@ const bookValidator = {
             .isNumeric()
             .withMessage("Price must be a number")
             .bail()
-            .isLength({ min: 10, max: 10000 })
+            .isFloat({ min: 10, max: 10000 })
             .withMessage(
                 "Book price can't be more than 10000 and less than 10"
             ),
@@ -172,7 +157,7 @@ const bookValidator = {
             .isNumeric()
             .withMessage("Stock quantity must be a number")
             .bail()
-            .isLength({
+            .isFloat({
                 min: 5,
                 max: 1000,
             })
@@ -222,7 +207,7 @@ const bookValidator = {
             .isNumeric()
             .withMessage("Price must be a number")
             .bail()
-            .isInt({
+            .isFloat({
                 min: 10,
                 max: 10000,
             })
