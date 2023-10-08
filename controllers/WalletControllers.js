@@ -76,7 +76,7 @@ class WalletController {
     async getWalletTransactions(req, res) {
         const walletTransections = await WalletTransectionModel.find({
             userId: req.user.userId,
-        });
+        }).sort({ createdAt: -1 });
 
         return res
             .status(OK)

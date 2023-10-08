@@ -27,9 +27,6 @@ const userSchema = new mongoose.Schema(
                 ref: "Review",
             },
         ],
-        address: {
-            type: String,
-        },
         walletId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Wallet",
