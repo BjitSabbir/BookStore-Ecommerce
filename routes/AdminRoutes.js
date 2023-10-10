@@ -27,7 +27,7 @@ route.get("/fetch/userData", verifyTokenMiddleware, viewAllUserData);
 // View all users
 route.get(
     "/fetch/allUsers",
-    AdminValidator.viewTransection,
+    // AdminValidator.viewTransection,
     verifyTokenMiddleware,
     getAllUsers
 );

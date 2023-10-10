@@ -101,12 +101,25 @@ class AdminControllers {
                 const user = await UserModel.findById(userId)
                     .populate({
                         path: "reviews",
+                        options: {
+                            sort: { createdAt: -1 }
+                        }
                     })
                     .populate("walletId");
 
+
+                const usersTransections = await TransectionModel.find({
+                    userId: userId,
+                }).populate({
+                    path: "books.bookId",
+                    select: "title isbn",
+
+                }).limit(5).sort({ createdAt: -1 });
+
+
                 if (user) {
                     res.status(OK).send(
-                        successMessage("Admin - View User Data", user)
+                        successMessage("Admin - View User Data", { user, usersTransections })
                     );
                 } else {
                     res.status(NOT_FOUND).send(errorMessage("User not found"));
@@ -124,12 +137,12 @@ class AdminControllers {
     async getAllUsers(req, res) {
         try {
             if (req.user.role === 1) {
-                const errorQuery = validationResult(req);
-                if (!errorQuery.isEmpty()) {
-                    return res
-                        .status(NOT_FOUND)
-                        .send(errorMessage(errorQuery.array()[0].msg));
-                }
+                // const errorQuery = validationResult(req);
+                // if (!errorQuery.isEmpty()) {
+                //     return res
+                //         .status(NOT_FOUND)
+                //         .send(errorMessage(errorQuery.array()[0].msg));
+                // }
                 const { page, limit, sortType, sortKey } = req.query;
 
                 const options = {
@@ -146,10 +159,32 @@ class AdminControllers {
                     options.sort = sort;
                 }
 
-                const users = await UserModel.find(query, null, options);
+                const users = await UserModel.find(query, null, options).populate(
+                    "walletId"
+                )
+
+                const totalUsers = await UserModel.countDocuments();
+
+                const totalPages = Math.ceil(totalUsers / parseInt(limit));
+
+                const pagination = {
+                    page: parseInt(page),
+                    totalPages: totalPages,
+                    totalUsers: totalUsers,
+                };
+
+
+
+
 
                 res.status(OK).send(
-                    successMessage("User list retrieved successfully", users)
+                    successMessage("User list retrieved successfully",
+                        {
+                            users,
+                            pagination
+                        }
+
+                    )
                 );
             } else {
                 res.status(FORBIDDEN).send(errorMessage("User not authorized"));

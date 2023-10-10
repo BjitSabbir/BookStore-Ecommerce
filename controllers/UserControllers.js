@@ -52,7 +52,13 @@ class UserControllers {
         console.log(userId);
 
         try {
-            const user = await UserModel.findById(userId);
+            const user = await UserModel.findById(userId).populate({
+                path: "reviews",
+                options: {
+                    sort: { createdAt: -1 },
+                    limit: 5,
+                }
+            }).populate("walletId");
 
             if (!user) {
                 return res

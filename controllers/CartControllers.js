@@ -5,6 +5,7 @@ const {
     FORBIDDEN,
     CREATED,
     BAD_REQUEST,
+    INTERNAL_SERVER_ERROR,
 } = require("./../constants/statusCode");
 
 const CartModel = require("../database/models/CartModel");
@@ -52,6 +53,52 @@ class CartControllers {
                 .send(successMessage("Cart fetched successfully", cart));
         }
     }
+
+    async addManyToCart(req, res) {
+        try {
+            const books = req.body;
+
+            const cart = await CartModel.findOne({ userId: req.user.userId });
+
+            if (!cart) {
+                return res.status(NOT_FOUND).send(errorMessage("Cart not found"));
+            }
+
+
+            cart.books = [];
+
+            for (const book of books) {
+                const currentBook = await BookModel.findById(book._id);
+
+                if (!currentBook) {
+                    return res.status(NOT_FOUND).send(errorMessage("Book not found"));
+                } else if (currentBook.stock_quantity < book.quantity) {
+                    return res.status(BAD_REQUEST).send(errorMessage("Quantity not available"));
+                } else {
+                    cart.books.push({
+                        bookId: currentBook._id,
+                        price: currentBook.price,
+                        quantity: book.quantity,
+                    });
+                }
+            }
+
+            // Calculate the total price of the cart
+            const totalPrice = cart.books.reduce((total, book) => {
+                return total + (book.price * book.quantity);
+            }, 0);
+
+            cart.total = totalPrice;
+
+            await cart.save();
+
+            return res.status(OK).send(successMessage("Books added to cart successfully", cart));
+        } catch (error) {
+            console.error(error);
+            return res.status(INTERNAL_SERVER_ERROR).send(errorMessage("Internal Server Error"));
+        }
+    }
+
 
     async addToCart(req, res) {
         const error = validationResult(req).array();
@@ -205,7 +252,7 @@ class CartControllers {
 
                     const price = book.isDiscountActive
                         ? cart.books[existingBookIndex].quantity *
-                          (1 - book.discount_percentage / 100)
+                        (1 - book.discount_percentage / 100)
                         : book.price;
 
                     cart.total = cart.books.reduce(

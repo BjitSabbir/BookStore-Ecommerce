@@ -10,3 +10,5 @@
 # if a  product has multiple discount and latest discount is disabled/ deleted the previous discount will be applied 
 # if a discount removed or deleted then the discount will be removed
 # if a discount is update then the discount will be removed by scheduler and will be again applied after one minute
+
+

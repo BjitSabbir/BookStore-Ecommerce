@@ -4,6 +4,7 @@ const {
     addToCart,
     updateCartItem,
     removeCart,
+    addManyToCart
 } = require("../controllers/CartControllers");
 const route = express();
 const verifyTokenMiddleware = require("../middleware/AuthMiddleware");
@@ -17,6 +18,12 @@ route.post(
     CartValidator.addToCartValidator,
     verifyTokenMiddleware,
     addToCart
+);
+
+route.post(
+    "/addMany",
+    verifyTokenMiddleware,
+    addManyToCart
 );
 route.put(
     "/update",
