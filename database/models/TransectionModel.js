@@ -67,40 +67,36 @@ const transectionSchema = new mongoose.Schema(
     }
 );
 
-
-transectionSchema.methods.setUserTypeDiscountAmount = async function (
-){
+transectionSchema.methods.setUserTypeDiscountAmount = async function () {
     const userTransectionLength = await WalletTransectionModel.find({
         userId: this.userId,
-        transectionType : "payment",
+        transectionType: "payment",
     }).count();
 
     console.log(userTransectionLength);
 
-    if(userTransectionLength >= 1 && userTransectionLength <= 50){
+    if (userTransectionLength >= 1 && userTransectionLength <= 50) {
         this.userType = "silver";
         this.userTypeDiscount = 0;
-        this.userTypeDiscountAmount = this.total ;
-    }else if(userTransectionLength > 50 && userTransectionLength <= 100){
+        this.userTypeDiscountAmount = this.total;
+    } else if (userTransectionLength > 50 && userTransectionLength <= 100) {
         this.userType = "gold";
         this.userTypeDiscount = 2;
-        this.userTypeDiscountAmount = this.total - (this.total * this.userTypeDiscount / 100);
-    }else if(userTransectionLength > 100 && userTransectionLength <= 200){
+        this.userTypeDiscountAmount =
+            this.total - (this.total * this.userTypeDiscount) / 100;
+    } else if (userTransectionLength > 100 && userTransectionLength <= 200) {
         this.userType = "platinum";
         this.userTypeDiscount = 4;
-        this.userTypeDiscountAmount = this.total - (this.total * this.userTypeDiscount / 100);
-    }else{
+        this.userTypeDiscountAmount =
+            this.total - (this.total * this.userTypeDiscount) / 100;
+    } else {
         this.userType = "diamond";
         console.log(this.userType);
         this.userTypeDiscount = 6;
-        this.userTypeDiscountAmount = this.total - (this.total * this.userTypeDiscount / 100);
-
+        this.userTypeDiscountAmount =
+            this.total - (this.total * this.userTypeDiscount) / 100;
     }
-
-
-
-}
-
+};
 
 const TransectionModel = mongoose.model("Transection", transectionSchema);
 module.exports = TransectionModel;

@@ -7,6 +7,7 @@ const {
 } = require("./../constants/statusCode");
 
 const UserModel = require("../database/models/UserModel");
+const TransectionModel = require("../database/models/TransectionModel");
 
 class UserControllers {
     async updateUser(req, res) {
@@ -52,13 +53,19 @@ class UserControllers {
         console.log(userId);
 
         try {
-            const user = await UserModel.findById(userId).populate({
-                path: "reviews",
-                options: {
-                    sort: { createdAt: -1 },
-                    limit: 5,
-                }
-            }).populate("walletId");
+            const user = await UserModel.findById(userId)
+                .populate({
+                    path: "reviews",
+                    options: {
+                        sort: { createdAt: -1 },
+                        limit: 5,
+                    },
+                    populate: {
+                        path: "bookId",
+                        select: "title isbn",
+                    },
+                })
+                .populate("walletId");
 
             if (!user) {
                 return res
@@ -66,7 +73,21 @@ class UserControllers {
                     .send(errorMessage("User not found"));
             }
 
-            return res.status(OK).send(successMessage("User found", user));
+            const usersTransections = await TransectionModel.find({
+                userId: userId,
+            })
+                .populate({
+                    path: "books.bookId",
+                    select: "title isbn ",
+                })
+                .sort({ createdAt: -1 })
+                .limit(5);
+
+            return res
+                .status(OK)
+                .send(
+                    successMessage("User found", { user, usersTransections })
+                );
         } catch (err) {
             console.error(err);
             return res
