@@ -293,6 +293,60 @@ class BookControllers {
         }
     }
 
+    async getBookByGenre(req, res) {
+        const genre = req.params.genre;
+
+        console.log(genre);
+
+        const genreRegex = new RegExp(genre, 'i');
+
+        // Find 5 books of the specified genre
+        const genreBooks = await BookModel
+            .find({ "genre": { $regex: genreRegex } })
+            .limit(10);
+
+
+        const recentBooks = await BookModel
+            .find()
+            .sort({ "createdAt": -1 })
+            .limit(10);
+
+
+        const commentCountPipeline = [
+            {
+                $project: {
+                    title: 1,
+                    genre: 1,
+                    image: 1,
+                    commentCount: { $size: "$reviews" }
+                }
+            },
+            {
+                $sort: { commentCount: -1 }
+            },
+            {
+                $limit: 10
+            }
+        ];
+
+        const mostCommentedBooks = await BookModel
+            .aggregate(commentCountPipeline);
+
+
+        return res.status(OK).send(
+            successMessage(
+                "Books fetched successfully",
+                {
+                    genreBooks,
+                    recentBooks,
+                    mostCommentedBooks
+                }
+            )
+        )
+    }
+
+
+
 }
 
 module.exports = new BookControllers();

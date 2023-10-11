@@ -6,6 +6,7 @@ const {
     editBook,
     deleteBook,
     getOneBook,
+    getBookByGenre,
 } = require("../controllers/BookControllers");
 const verifyTokenMiddleware = require("../middleware/AuthMiddleware");
 const {
@@ -18,6 +19,7 @@ const route = express();
 route.post("/addManyBooks", verifyTokenMiddleware, addManyBooks);
 route.post("/add", bookValidator.addOneBook, verifyTokenMiddleware, addOneBook);
 route.get("/getAllBooks", bookValidator.getBookValidation, getAllBooks);
+route.get("/getBooksByGenre/:genre", getBookByGenre);
 route.get("/:id", bookValidator.getBookValidation, getOneBook);
 route.put(
     "/edit/:id",
