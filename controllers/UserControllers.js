@@ -62,7 +62,7 @@ class UserControllers {
                     },
                     populate: {
                         path: "bookId",
-                        select: "title isbn",
+                        select: "title isbn image",
                     },
                 })
                 .populate("walletId");
@@ -78,7 +78,7 @@ class UserControllers {
             })
                 .populate({
                     path: "books.bookId",
-                    select: "title isbn ",
+                    select: "title isbn image ",
                 })
                 .sort({ createdAt: -1 })
                 .limit(5);

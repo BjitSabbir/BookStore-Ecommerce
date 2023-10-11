@@ -438,10 +438,105 @@ class AdminControllers {
                         },
                     ]);
 
+                const totalUsers = await UserModel.countDocuments();
+                const totalBooks = await BookModel.countDocuments();
+                const totalOrders = await TransectionModel.countDocuments();
+
+                const top5commentedBooks = await BookModel.aggregate([
+                    {
+                        $lookup: {
+                            from: "reviews",
+                            localField: "_id",
+                            foreignField: "bookId",
+                            as: "reviews",
+                        },
+                    },
+                    {
+                        $unwind: "$reviews",
+                    },
+                    {
+                        $group: {
+                            _id: "$reviews.bookId",
+                            count: { $sum: 1 },
+                            book: { $first: "$$ROOT" },
+                        },
+                    },
+                    {
+                        $sort: {
+                            count: -1,
+                        },
+                    },
+                    {
+                        $project: {
+                            "book.title": 1,
+                            "book.image": 1,
+                            "book.createdAt": 1,
+                        },
+                    },
+                    {
+                        $limit: 5,
+                    },
+                ]);
+
+
+                const topActiveUsersBasedOnReviews = await UserModel.aggregate([
+                    {
+                        $lookup: {
+                            from: "reviews",
+                            localField: "_id",
+                            foreignField: "userId",
+                            as: "reviews",
+                        },
+                    },
+                    {
+                        $unwind: "$reviews",
+                    },
+                    {
+                        $group: {
+                            _id: "$reviews.userId",
+                            count: { $sum: 1 },
+                            user: { $first: "$$ROOT" },
+                        },
+                    },
+                    {
+                        $sort: { count: -1 },
+                    },
+                    {
+                        $limit: 5,
+                    },
+                ]);
+
+                const thisWeekDailySales = await TransectionModel.aggregate([
+                    {
+                        $match: {
+                            createdAt: {
+                                $gte: new Date(
+                                    new Date().getTime() - 7 * 24 * 60 * 60 * 1000
+                                ),
+                            },
+                        },
+                    },
+                    {
+                        $group: {
+                            _id: null,
+                            totalSales: { $sum: "$total" },
+                        },
+                    },
+                ]);
+
+
+
+
                 res.json({
                     totalSales,
+                    totalUsers,
+                    totalBooks,
+                    totalOrders,
+                    thisWeekDailySales,
                     salesByBook: salesAnalysis,
                     topPayedUsers: usersTotalPayment,
+                    top5CommentedBooks: top5commentedBooks,
+                    topActiveUsersBasedOnReviews: topActiveUsersBasedOnReviews
                 });
             } catch (error) {
                 console.error(error);
