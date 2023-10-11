@@ -8,6 +8,7 @@ const {
 const BookModel = require("../database/models/BookModel");
 const CartModel = require("../database/models/CartModel");
 const TransectionModel = require("../database/models/TransectionModel");
+const UserModel = require("../database/models/UserModel");
 const WalletModel = require("../database/models/wallet/WalletModel");
 const WalletTransectionModel = require("../database/models/wallet/WalletTransectionModel");
 const { successMessage, errorMessage } = require("../utils/app-errors");
@@ -15,7 +16,20 @@ const { validationResult } = require("express-validator");
 
 class transactionControllers {
     async addUserTransection(req, res) {
-        const address = req.body.address;
+        console.log(req.body);
+        var address = req.body.address;
+
+        if (!address) {
+            //check if User has address
+            const user = await UserModel.findById(req.user.userId);
+            if (!user.address) {
+                return res
+                    .status(BAD_REQUEST)
+                    .send(errorMessage("Address is required"));
+            } else {
+                address = user.address;
+            }
+        }
         //get user cart
         const cart = await CartModel.findOne({
             userId: req.user.userId,
