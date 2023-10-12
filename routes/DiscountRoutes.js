@@ -5,6 +5,7 @@ const {
     updateDiscount,
     deleteDiscount,
     disableDiscount,
+    getAllDiscount,
 } = require("../controllers/DiscountControllers");
 const routes = express.Router();
 const verifyTokenMiddleware = require("../middleware/AuthMiddleware");
@@ -12,6 +13,7 @@ const checkDiscountMiddleware = require("../middleware/DiscountMiddleware");
 const {
     DiacountValidators,
 } = require("../database/validation/inputValidationSchema");
+const { route } = require("./WalletRoutes");
 
 routes.post(
     "/add",
@@ -29,5 +31,6 @@ routes.put(
 );
 routes.delete("/remove/:id", verifyTokenMiddleware, deleteDiscount);
 routes.put("/disable/:id", verifyTokenMiddleware, disableDiscount);
+routes.get("/all", verifyTokenMiddleware, getAllDiscount);
 
 module.exports = routes;

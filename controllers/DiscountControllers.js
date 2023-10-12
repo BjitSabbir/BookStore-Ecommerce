@@ -13,6 +13,7 @@ const { validationResult } = require("express-validator");
 
 class DiscountControllers {
     async createDiscount(req, res) {
+        console.log("I was called", req.body);
         if (req.user.role === 2) {
             return res
                 .status(FORBIDDEN)
@@ -32,6 +33,7 @@ class DiscountControllers {
                     bookIds = [],
                     bookGenres = [],
                     bookAuthors = [],
+                    image,
                     discountValue,
                     activationDate,
                     endDate,
@@ -62,6 +64,7 @@ class DiscountControllers {
                     bookIds,
                     bookGenres,
                     bookAuthors,
+                    image,
                     discountValue,
                     activationDate,
                     endDate,
@@ -123,6 +126,19 @@ class DiscountControllers {
             }
         }
     }
+    async getAllDiscount(req, res) {
+        try {
+            const discounts = await DiscountModel.find().limit(10);
+            return res
+                .status(OK)
+                .send(successMessage("Discount found", discounts));
+        } catch (error) {
+            console.error(error);
+            return res
+                .status(INTERNAL_SERVER_ERROR)
+                .send(errorMessage("Internal server error"));
+        }
+    }
 
     async updateDiscount(req, res) {
         if (req.user.role === 2) {
@@ -153,6 +169,7 @@ class DiscountControllers {
                 bookIds = [],
                 bookGenres = [],
                 bookAuthors = [],
+                image,
                 discountValue,
                 activationDate,
                 endDate,
@@ -176,6 +193,7 @@ class DiscountControllers {
                 description,
                 bookIds,
                 bookGenres,
+                image,
                 bookAuthors,
                 discountValue,
                 activationDate,

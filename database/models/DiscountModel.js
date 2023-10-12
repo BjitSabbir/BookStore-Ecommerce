@@ -11,6 +11,10 @@ const discountSchema = new mongoose.Schema({
         type: String,
         trim: true,
     },
+    image: {
+        type: String,
+        trim: true,
+    },
     bookIds: [
         {
             type: mongoose.Types.ObjectId,
