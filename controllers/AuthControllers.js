@@ -16,7 +16,6 @@ const {
 } = require("../utils");
 const { validationResult } = require("express-validator");
 
-
 class AuthControllers {
     async register(req, res) {
         const error = validationResult(req).array();
@@ -75,9 +74,13 @@ class AuthControllers {
                 );
                 const role = user.role;
                 const userId = user.userId;
-                return res
-                    .status(OK)
-                    .send(successMessage("Login successful", { token, role, userId }));
+                return res.status(OK).send(
+                    successMessage("Login successful", {
+                        token,
+                        role,
+                        userId,
+                    })
+                );
             } else {
                 return res
                     .status(NOT_FOUND)
@@ -91,6 +94,7 @@ class AuthControllers {
         if (error.length > 0) {
             return res.status(NOT_FOUND).send(errorMessage(error[0].msg));
         }
+        console.log(req.body);
         const { email } = req.body;
         const user = await AuthModel.findOne({ email });
         if (!user) {
