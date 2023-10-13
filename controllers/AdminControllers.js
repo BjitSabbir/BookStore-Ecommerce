@@ -102,24 +102,27 @@ class AdminControllers {
                     .populate({
                         path: "reviews",
                         options: {
-                            sort: { createdAt: -1 }
-                        }
+                            sort: { createdAt: -1 },
+                        },
                     })
                     .populate("walletId");
 
-
                 const usersTransections = await TransectionModel.find({
                     userId: userId,
-                }).populate({
-                    path: "books.bookId",
-                    select: "title isbn",
-
-                }).limit(5).sort({ createdAt: -1 });
-
+                })
+                    .populate({
+                        path: "books.bookId",
+                        select: "title isbn",
+                    })
+                    .limit(5)
+                    .sort({ createdAt: -1 });
 
                 if (user) {
                     res.status(OK).send(
-                        successMessage("Admin - View User Data", { user, usersTransections })
+                        successMessage("Admin - View User Data", {
+                            user,
+                            usersTransections,
+                        })
                     );
                 } else {
                     res.status(NOT_FOUND).send(errorMessage("User not found"));
@@ -159,9 +162,11 @@ class AdminControllers {
                     options.sort = sort;
                 }
 
-                const users = await UserModel.find(query, null, options).populate(
-                    "walletId"
-                )
+                const users = await UserModel.find(
+                    query,
+                    null,
+                    options
+                ).populate("walletId");
 
                 const totalUsers = await UserModel.countDocuments();
 
@@ -173,18 +178,11 @@ class AdminControllers {
                     totalUsers: totalUsers,
                 };
 
-
-
-
-
                 res.status(OK).send(
-                    successMessage("User list retrieved successfully",
-                        {
-                            users,
-                            pagination
-                        }
-
-                    )
+                    successMessage("User list retrieved successfully", {
+                        users,
+                        pagination,
+                    })
                 );
             } else {
                 res.status(FORBIDDEN).send(errorMessage("User not authorized"));
@@ -207,8 +205,7 @@ class AdminControllers {
                 }
 
                 const { userId } = req.params;
-                const { username, email, isActiveUser, address, phone } =
-                    req.body;
+                const { name, email, isActiveUser, address, phone } = req.body;
 
                 // Check if userId is a valid mongoose ObjectId
                 if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -253,7 +250,7 @@ class AdminControllers {
                 }
 
                 // Update other fields
-                userToUpdate.username = username;
+                userToUpdate.name = name;
                 userToUpdate.isActiveUser = isActiveUser;
                 userToUpdate.address = address;
                 userToUpdate.phone = phone;
@@ -478,7 +475,6 @@ class AdminControllers {
                     },
                 ]);
 
-
                 const topActiveUsersBasedOnReviews = await UserModel.aggregate([
                     {
                         $lookup: {
@@ -511,7 +507,8 @@ class AdminControllers {
                         $match: {
                             createdAt: {
                                 $gte: new Date(
-                                    new Date().getTime() - 7 * 24 * 60 * 60 * 1000
+                                    new Date().getTime() -
+                                        7 * 24 * 60 * 60 * 1000
                                 ),
                             },
                         },
@@ -524,9 +521,6 @@ class AdminControllers {
                     },
                 ]);
 
-
-
-
                 res.json({
                     totalSales,
                     totalUsers,
@@ -536,7 +530,7 @@ class AdminControllers {
                     salesByBook: salesAnalysis,
                     topPayedUsers: usersTotalPayment,
                     top5CommentedBooks: top5commentedBooks,
-                    topActiveUsersBasedOnReviews: topActiveUsersBasedOnReviews
+                    topActiveUsersBasedOnReviews: topActiveUsersBasedOnReviews,
                 });
             } catch (error) {
                 console.error(error);

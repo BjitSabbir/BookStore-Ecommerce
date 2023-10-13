@@ -56,13 +56,17 @@ class AuthControllers {
             return res.status(NOT_FOUND).send(errorMessage(error[0].msg));
         }
         const { email, password } = req.body;
-        const user = await AuthModel.findOne({ email });
+        const user = await AuthModel.findOne({ email }).populate("userId");
         if (!user) {
             return res.status(NOT_FOUND).send(errorMessage("User not found"));
         } else if (!user.isVerified) {
             return res
                 .status(FORBIDDEN)
                 .send(errorMessage("User not verified"));
+        } else if (user.userId.isActiveUser === false) {
+            return res
+                .status(FORBIDDEN)
+                .send(errorMessage("User is not active"));
         } else {
             const isMatch = await comparePassword(password, user.password);
             if (isMatch) {
