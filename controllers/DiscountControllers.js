@@ -330,6 +330,25 @@ class DiscountControllers {
             }
         }
     }
+
+    async getLatestActiveDiscount(req, res) {
+        try {
+            const discounts = await DiscountModel.find({
+                isDisabled: false
+            }).limit(3).populate({
+                path: "allBookIds",
+                select: "_id , image , title",
+            });
+            return res
+                .status(OK)
+                .send(successMessage("Discount found", discounts));
+        } catch (error) {
+            console.error(error);
+            return res
+                .status(INTERNAL_SERVER_ERROR)
+                .send(errorMessage("Internal server error"));
+        }
+    }
 }
 
 module.exports = new DiscountControllers();

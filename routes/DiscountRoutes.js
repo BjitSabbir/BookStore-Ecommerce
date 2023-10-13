@@ -6,6 +6,7 @@ const {
     deleteDiscount,
     disableDiscount,
     getAllDiscount,
+    getLatestActiveDiscount,
 } = require("../controllers/DiscountControllers");
 const routes = express.Router();
 const verifyTokenMiddleware = require("../middleware/AuthMiddleware");
@@ -32,5 +33,7 @@ routes.put(
 routes.delete("/remove/:id", verifyTokenMiddleware, deleteDiscount);
 routes.put("/disable/:id", verifyTokenMiddleware, disableDiscount);
 routes.get("/all", verifyTokenMiddleware, getAllDiscount);
+
+routes.get("/getLatestActiveDiscount", getLatestActiveDiscount);
 
 module.exports = routes;

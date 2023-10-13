@@ -508,7 +508,7 @@ class AdminControllers {
                             createdAt: {
                                 $gte: new Date(
                                     new Date().getTime() -
-                                        7 * 24 * 60 * 60 * 1000
+                                    7 * 24 * 60 * 60 * 1000
                                 ),
                             },
                         },
@@ -539,6 +539,30 @@ class AdminControllers {
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: "Internal Server Error" });
+        }
+    }
+
+    async updateTransaction(req, res) {
+        try {
+            const { transectionId } = req.params;
+            const { status } = req.body;
+            console.log(status, transectionId, req.params);
+
+            const transection = await TransectionModel.findById(transectionId);
+
+            if (!transection) {
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("Transaction not found"));
+
+            }
+
+            transection.status = status;
+            await transection.save();
+
+            res.status(OK).send(successMessage("Transaction updated"));
+        } catch (error) {
+            console.error(error);
         }
     }
 }

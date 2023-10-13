@@ -6,6 +6,7 @@ const {
     editUserData,
     deleteUser,
     sellAnalysis,
+    updateTransaction,
 } = require("../controllers/AdminControllers");
 const verifyTokenMiddleware = require("../middleware/AuthMiddleware");
 const {
@@ -50,5 +51,13 @@ route.delete(
 
 //analytics
 route.get("/analytics", verifyTokenMiddleware, sellAnalysis);
+
+//update transaction
+// Update transaction
+route.put(
+    "/update/transaction/:transectionId",
+    verifyTokenMiddleware,
+    updateTransaction
+);
 
 module.exports = route;
