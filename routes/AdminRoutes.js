@@ -12,6 +12,7 @@ const verifyTokenMiddleware = require("../middleware/AuthMiddleware");
 const {
     AdminValidator,
 } = require("../database/validation/inputValidationSchema");
+const { requestPasswordReset } = require("../controllers/AuthControllers");
 const route = express();
 
 // Get transaction of all users
@@ -59,5 +60,7 @@ route.put(
     verifyTokenMiddleware,
     updateTransaction
 );
+
+
 
 module.exports = route;

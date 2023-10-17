@@ -3,8 +3,8 @@ const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 const { databaseConnection } = require("./database/dbConnection");
-const { NOT_FOUND, OK } = require("./constants/statusCode");
-const { successMessage } = require("./utils/app-errors");
+const { NOT_FOUND, OK, BAD_REQUEST } = require("./constants/statusCode");
+const { successMessage, errorMessage } = require("./utils/app-errors");
 const AuthRoutes = require("./routes/AuthRoutes");
 const BookRoutes = require("./routes/BookRoutes");
 const ReviewRoutes = require("./routes/ReviewRoutes");
@@ -15,8 +15,10 @@ const WalletRoutes = require("./routes/WalletRoutes");
 const GetRecommendationRoute = require("./routes/GetRecommendationRoute");
 const AdminRoutes = require("./routes/AdminRoutes");
 const UserRoutes = require("./routes/UserRoutes");
+const FileUploadRoutes = require("./routes/FileUploadRoutes");
 const startDiscountScheduler = require("./services/discountScheduler");
 const morgan = require("morgan");
+const multer = require("multer");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -43,6 +45,18 @@ app.use("/user/wallet", WalletRoutes);
 app.use("/user/transactions", TransactionRoutes);
 app.use("/user/recommendations", GetRecommendationRoute);
 app.use("/admin", AdminRoutes);
+app.use("/file", FileUploadRoutes);
+
+app.use("/uploads", express.static(__dirname + "/uploads"));
+
+app.use((err, req, res, next) => {
+    console.log(err);
+    if (err instanceof multer.MulterError) {
+        return res.status(BAD_REQUEST).send(errorMessage(err.message));
+    } else {
+        next(err)
+    }
+})
 
 app.use("", (req, res) => {
     return res.status(NOT_FOUND).render("notFound.ejs");

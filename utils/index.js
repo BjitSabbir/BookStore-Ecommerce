@@ -1,9 +1,11 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const OTPGenerator = require('otp-generator'); 
+const OTPGenerator = require('otp-generator');
+const fs = require('fs');
+const path = require('path');
 
 
-// https://github.dev/codergogoi/Grocery_Online_Shopping_App/tree/master/online_shopping_monolithic
+
 
 const hashedPassword = async (password) => {
     return await bcrypt.hash(password, 12);
@@ -30,6 +32,33 @@ async function createOtp() {
     };
 }
 
+async function createFolderIfNotExists(folderPath) {
+    return new Promise((resolve, reject) => {
+        fs.mkdir(folderPath, { recursive: true }, (err) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve();
+            }
+        });
+    });
+}
+
+async function moveFileToFolder(file, folderName) {
+    const destinationPath = folderName
+    console.log("destinationPath", destinationPath)
+
+    return new Promise((resolve, reject) => {
+        fs.rename(file.path, destinationPath, (err) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(destinationPath);
+            }
+        });
+    });
+}
+
 
 
 
@@ -39,6 +68,8 @@ module.exports = {
     comparePassword,
     generateToken,
     generateOtp,
-    createOtp
-    
+    createOtp,
+    createFolderIfNotExists,
+    moveFileToFolder,
+
 }

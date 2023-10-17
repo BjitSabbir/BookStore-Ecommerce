@@ -4,6 +4,9 @@ const {
     login,
     verifyEmail,
     reqForOtp,
+    requestPasswordReset,
+    resetPassword,
+    checkPasswordResetToken
 } = require("../controllers/AuthControllers");
 const {
     userValidator,
@@ -14,5 +17,10 @@ route.post("/register", userValidator.register, register);
 route.post("/requestOtp", userValidator.verifyOnlyEmail, reqForOtp);
 route.post("/login", userValidator.register, login);
 route.post("/verifyEmail", userValidator.verifyEmail, verifyEmail);
+//requestPasswordReset
+route.post("/requestPasswordReset", requestPasswordReset)
+route.post("/resetPassword", resetPassword)
+route.post("/checkPasswordResetToken", checkPasswordResetToken)
+
 
 module.exports = route;

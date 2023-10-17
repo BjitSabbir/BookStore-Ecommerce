@@ -9,12 +9,20 @@ const AuthModel = require("../database/models/AuthModel");
 const UserModel = require("../database/models/UserModel");
 const WalletModel = require("../database/models/wallet/WalletModel");
 const {
-    hashedPassword,
     comparePassword,
     generateToken,
     createOtp,
+    hashedPassword,
 } = require("../utils");
 const { validationResult } = require("express-validator");
+const { sendEmail } = require("../services/mailService");
+const ejs = require("ejs");
+const { promisify } = require("util");
+const ejsRenderFile = promisify(ejs.renderFile);
+const crypto = require('crypto');
+const path = require("path");
+
+
 
 class AuthControllers {
     async register(req, res) {
@@ -113,6 +121,16 @@ class AuthControllers {
             // Save the otp in the database for user
             user.authOtp.push(otpCreation);
             await user.save();
+
+            const htmlBody = await ejsRenderFile(
+                __dirname + "/../views/confirmEmail.ejs", {
+                otp: otpCreation.otp,
+                email: email
+            }
+            )
+
+            sendEmail(email, "BookAddict OTP", htmlBody);
+
             return res
                 .status(OK)
                 .send(successMessage("Otp sent successfully", otpCreation.otp));
@@ -188,6 +206,181 @@ class AuthControllers {
                         .send(errorMessage("Invalid OTP"));
                 }
             }
+        }
+    }
+
+    async requestPasswordReset(req, res) {
+        const { email } = req.body;
+
+        try {
+            const user = await AuthModel.findOne({ email });
+            if (!user) {
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("User not found"));
+            }
+
+            const resetToken = crypto.randomBytes(32).toString("hex");
+            const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
+            user.resetPassword.resetPasswordExpire = resetTokenExpiry;
+            user.resetPassword.resetPasswordToken = resetToken;
+            user.resetPassword.isResetPassword = true;
+
+            await user.save();
+
+            const resetUrl = path.join(
+                "http://localhost:5173",
+                "auth/resetPassword",
+                resetToken,
+                user._id.toString()
+            )
+
+            const htmlBody = await ejsRenderFile(
+                __dirname + "/../views/forgetPassword.ejs", {
+                resetToken: resetUrl
+            }
+            )
+
+            sendEmail(email, "BookAddict Password Reset", htmlBody);
+
+            return res
+                .status(OK)
+                .send(successMessage("Password reset link sent"));
+
+
+        } catch (error) {
+            return res
+                .status(NOT_FOUND)
+                .send(errorMessage(error));
+        }
+
+    }
+
+    async checkPasswordResetToken(req, res) {
+        const { resetToken, userId } = req.body;
+        try {
+            const user = await AuthModel.findById(userId);
+
+            if (!user) {
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("User not found"));
+            }
+
+            if (!user.resetPassword.isResetPassword) {
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("Invalid reset token"));
+            }
+
+            if (user.resetPassword.resetPasswordToken != resetToken) {
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("Invalid reset token"));
+            }
+
+            if (user.resetPassword.resetPasswordExpire < new Date()) {
+                user.resetPassword = {
+                    resetPasswordToken: "",
+                    resetPasswordExpire: "",
+                    isResetPassword: false
+                };
+                await user.save();
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("Reset token expired"));
+            }
+
+
+            return res.status(OK).send(successMessage("Valid reset token"));
+        }
+        catch (error) {
+            return res
+                .status(NOT_FOUND)
+                .send(errorMessage(error.response.data.message));
+        }
+    }
+
+
+    async resetPassword(req, res) {
+
+        const { resetToken, userId, password } = req.body;
+        console.log(resetToken, userId, password);
+
+        try {
+
+            const user = await AuthModel.findById(userId);
+
+            if (!user) {
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("User not found"));
+            }
+            console.log("found user : " + user);
+            if (!user.resetPassword.isResetPassword) {
+
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("Invalid reset token"));
+            }
+            console.log("reset token")
+
+            if (user.resetPassword.resetPasswordToken != resetToken) {
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("Invalid reset token"));
+            }
+
+
+
+
+
+            const resetTokenExpiry = user.resetPassword.resetPasswordExpire;
+
+            if (resetTokenExpiry < new Date()) {
+
+                user.resetPassword = {
+                    resetPasswordToken: "",
+                    resetPasswordExpire: "",
+                    isResetPassword: false
+                };
+                await user.save();
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("Reset token expired"));
+            }
+
+            console.log("reset token expired")
+
+
+            const isMatch = await comparePassword(password, user.password);
+            if (isMatch) {
+                return res
+                    .status(NOT_FOUND)
+                    .send(errorMessage("New password cannot be same as old password"));
+            }
+
+
+
+            const hashedNewPassword = await hashedPassword(password);
+            console.log("found user : " + hashedNewPassword);
+            user.password = hashedNewPassword;
+            user.resetPassword = {
+                resetPasswordToken: "",
+                resetPasswordExpire: "",
+                isResetPassword: false
+            };
+            await user.save();
+            console.log("Here");
+
+            return res.status(OK).send(successMessage("Password reset successfully"));
+
+
+
+        } catch (error) {
+            return res
+                .status(NOT_FOUND)
+                .send(errorMessage(error));
         }
     }
 }
